@@ -1,0 +1,60 @@
+{
+  "name": "bs-token",
+  "version": "1.0.0",
+  "description": "BSToken Ethereum contract and lib",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "keywords": [
+    "ethereum",
+    "blockchain",
+    "contract",
+    "solidity",
+    "web3"
+  ],
+  "author": "Banco Sabadell, S.A (https://github.com/BancoSabadell)",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/BancoSabadell/bs-token/issues"
+  },
+  "homepage": "https://github.com/BancoSabadell/bs-token#readme",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/BancoSabadell/bs-token.git"
+  },
+  "dependencies": {
+    "solc": "^0.4.6",
+    "web3": "^0.16.0",
+    "eslint": "^3.12.2",
+    "smart-contract-deployer": "git+https://a57c26aca1254beb929ba38251940f77a8ab4d2e:x-oauth-basic@github.com/BancoSabadell/smart-contract-deployer.git",
+    "sendgrid": "^4.7.1"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "chai-as-promised": "^6.0.0",
+    "mocha": "^3.1.2",
+    "ethereumjs-testrpc": "^3.0.2",
+    "bluebird": "^3.4.6"
+  },
+  "eslintConfig": {
+    "env": {
+      "node": true
+    },
+    "parserOptions": {
+      "ecmaVersion": 6,
+      "sourceType": "script"
+    },
+    "rules": {
+      "no-unused-vars": [
+        "error",
+        {
+          "argsIgnorePattern": "^_"
+        }
+      ],
+      "indent": ["error", 4],
+      "comma-dangle": ["error", { "functions": "ignore" }]
+    },
+    "extends": "airbnb-base"
+  }
+}

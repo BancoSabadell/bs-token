@@ -1,0 +1,198 @@
+'use strict';
+
+const Promise = require('bluebird');
+const sendgrid = require('sendgrid');
+
+class BSToken {
+    constructor(web3, config) {
+        this.config = config;
+        this.web3 = web3;
+        this.contract = this.web3.eth.contract(config.contractBSToken.abi)
+            .at(config.contractBSToken.address);
+
+        // watch for CashOut events
+        this.contract.CashOut((error, result) => {
+            if (!error) {
+                this.sendCashOutEmail(
+                    result.args.buyer,
+                    result.args.amount,
+                    result.args.bankAccount
+                );
+            }
+        });
+
+        Promise.promisifyAll(this.web3.personal);
+        Promise.promisifyAll(this.web3.eth);
+        Promise.promisifyAll(this.contract);
+    }
+
+    isEthereumAddress(candidate) {
+        return this.web3.isAddress(candidate);
+    }
+
+    unlockAdminAccount() {
+        return this.web3.personal.unlockAccountAsync(
+            this.config.admin.account,
+            this.config.admin.password
+        );
+    }
+
+    unlockAccount(account, password) {
+        return this.web3.personal.unlockAccountAsync(account, password);
+    }
+
+    stoppedCheck() {
+        return this.contract.stoppedAsync()
+            .then((stopped) => {
+                if (stopped) {
+                    throw new Error('This contract has been cautiously stopped');
+                }
+            });
+    }
+
+    frozenAccountCheck(target) {
+        return this.contract.frozenAccountAsync(target)
+            .then((frozen) => {
+                if (frozen) {
+                    throw new Error(`${target} address has been cautiously frozen`);
+                }
+            });
+    }
+
+    enoughAllowanceFundsCheck(spender, target, required) {
+        return this.contract.allowanceAsync(target, spender)
+            .then((amount) => {
+                if (amount < required) {
+                    throw new Error('Spender has not enough allowance funds');
+                }
+            });
+    }
+
+    enoughFundsCheck(target, required) {
+        return this.contract.balanceOfAsync(target)
+            .then((balance) => {
+                if (balance < required) {
+                    throw new Error(`${target} address has not enough funds`);
+                }
+            });
+    }
+
+    frozenAccount(target) {
+        return this.contract.frozenAccountAsync(target)
+            .then(state => ({ frozen: state }));
+    }
+
+    allowance(target, spender) {
+        return this.contract.allowanceAsync(target, spender)
+            .then(value => ({ amount: value.toNumber() }));
+    }
+
+    stop() {
+        return this.unlockAdminAccount()
+            .then(() => this.contract.emergencyStopAsync({
+                from: this.config.admin.account,
+                gas: 3000000
+            }))
+            .then(tx => ({ tx }));
+    }
+
+    release() {
+        return this.unlockAdminAccount()
+            .then(() => this.contract.releaseAsync({
+                from: this.config.admin.account,
+                gas: 3000000
+            }))
+            .then(tx => ({ tx }));
+    }
+
+    freezeAccount(target, freeze) {
+        return this.unlockAdminAccount()
+            .then(() => this.contract.freezeAccountAsync(target, freeze, {
+                from: this.config.admin.account,
+                gas: 3000000
+            }))
+            .then(tx => ({ tx }));
+    }
+
+    transfer(from, passFrom, to, amount) {
+        return Promise.join(this.stoppedCheck(), this.frozenAccountCheck(from),
+            this.enoughFundsCheck(from, amount))
+            .then(() => this.unlockAccount(from, passFrom))
+            .then(() => this.contract.transferAsync(to, amount, {
+                from,
+                gas: 3000000
+            }))
+            .then(tx => ({ tx }));
+    }
+
+    approve(from, passFrom, spender, amount) {
+        return Promise.join(this.stoppedCheck(), this.frozenAccountCheck(from),
+            this.enoughFundsCheck(from, amount))
+            .then(() => this.unlockAccount(from, passFrom))
+            .then(() => this.contract.approveAsync(spender, amount, {
+                from,
+                gas: 3000000
+            }))
+            .then(tx => ({ tx }));
+    }
+
+    approveAndCall(from, passFrom, spender, to, id, amount) {
+        return Promise.join(this.stoppedCheck(), this.frozenAccountCheck(from),
+            this.enoughFundsCheck(from, amount))
+            .then(() => this.unlockAccount(from, passFrom))
+            .then(() => this.contract.approveAndCallAsync(spender, to, id, amount, {
+                from,
+                gas: 3000000
+            }))
+            .then(tx => ({ tx }));
+    }
+
+    transferFrom(spender, passSpender, from, to, amount) {
+        return Promise.join(this.stoppedCheck(), this.frozenAccountCheck(from),
+            this.enoughAllowanceFundsCheck(spender, from, amount),
+            this.enoughFundsCheck(from, amount))
+            .then(() => this.unlockAccount(spender, passSpender))
+            .then(() => this.contract.transferFromAsync(from, to, amount, {
+                from: spender,
+                gas: 3000000
+            }))
+            .then(tx => ({ tx }));
+    }
+
+    cashIn(target, amount) {
+        return Promise.join(this.stoppedCheck(), this.frozenAccountCheck(target))
+            .then(() => this.unlockAdminAccount())
+            .then(() => this.contract.cashInAsync(target, amount,
+                { from: this.config.admin.account, gas: 3000000 }))
+            .then(tx => ({ tx }));
+    }
+
+    cashOut(target, pass, amount, bankAccount) {
+        return Promise.join(this.stoppedCheck(), this.frozenAccountCheck(target),
+            this.enoughFundsCheck(target, amount))
+            .then(() => this.unlockAccount(target, pass))
+            .then(() => this.contract.cashOutAsync(amount, bankAccount,
+                { from: target, gas: 3000000 }))
+            .then(tx => ({ tx }));
+    }
+
+    balanceOf(target) {
+        return this.contract.balanceOfAsync(target)
+            .then(balance => ({ amount: balance.toNumber() }));
+    }
+
+    sendCashOutEmail(target, cashOutAmount, bankAccount) {
+        const helper = sendgrid.mail;
+        const fromEmail = new helper.Email('escrow.app@bancsabadell.com');
+        const toEmail = new helper.Email('cayellasisaac@bancsabadell.com');
+        const subject = `Cash out request from ${target}`;
+        const content = new helper.Content('text/plain', `Amount: ${cashOutAmount} Bank Account: ${bankAccount} Address: ${target}`);
+        const mail = new helper.Mail(fromEmail, subject, toEmail, content);
+
+        const sg = sendgrid(this.config.sendgrid.apiKey);
+        const request = sg.emptyRequest({ method: 'POST', path: '/v3/mail/send', body: mail.toJSON() });
+        sg.API(request);
+    }
+}
+
+module.exports = BSToken;
