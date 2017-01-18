@@ -6,6 +6,7 @@ contract BSTokenData is Ownable {
 
     struct Account {
         uint256 balance;
+        bool frozen;
     }
 
     /* Total token supply */
@@ -20,6 +21,14 @@ contract BSTokenData is Ownable {
     function addToBalance(address account, uint256 amount) onlyOwner {
         accounts[account].balance += amount;
         totalSupply += amount;
+    }
+
+    function freezeAccount(address account, bool freeze) onlyOwner {
+        accounts[account].frozen = freeze;
+    }
+
+    function frozenAccount(address account) onlyOwner constant returns (bool) {
+        return accounts[account].frozen;
     }
 
 }

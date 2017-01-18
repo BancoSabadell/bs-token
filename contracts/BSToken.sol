@@ -11,8 +11,6 @@ contract BSToken is Ownable {
     string public symbol;
     uint8 public decimals;
 
-    mapping (address => bool) public frozenAccount;
-
     BSTokenData internal tokenData;
 
     /* Returns the amount which _spender is still allowed to withdraw from _owner */
@@ -47,6 +45,10 @@ contract BSToken is Ownable {
     /* Get the total token supply */
     function totalSupply() constant returns (uint256) {
         return tokenData.totalSupply();
+    }
+
+    function frozenAccount(address account) constant returns (bool) {
+        return tokenData.frozenAccount(account);
     }
 
     /* Send 'value' amount of tokens to address 'to' */
@@ -108,12 +110,12 @@ contract BSToken is Ownable {
     }
 
     function freezeAccount(address target, bool freeze) onlyOwner {
-        frozenAccount[target] = freeze;
+        tokenData.freezeAccount(target, freeze);
         FrozenFunds(target, freeze);
     }
 
     modifier accountIsNotFrozen(address target) {
-        if (frozenAccount[target])
+        if (tokenData.frozenAccount(target))
             throw;
         _;
     }
