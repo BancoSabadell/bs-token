@@ -299,6 +299,12 @@ describe('token', function () {
                 assert.equal(expected.valueOf(), amount);
             });
         });
+
+        it('totalSupply should remain the same after transfer', () => {
+            return token.totalSupplyAsync().then(expected => {
+                assert.equal(expected.valueOf(), initialSupply + amount);
+            });
+        });
     });
 
     describe('approve', () => {
@@ -367,6 +373,12 @@ describe('token', function () {
         it('check allowance', () => {
             return token.allowanceAsync(account3, accountDelegate).then(expected => {
                 assert.equal(expected.valueOf(), amount);
+            });
+        });
+
+        it('totalSupply should remain the same after allowance', () => {
+            return token.totalSupplyAsync().then(expected => {
+                assert.equal(expected.valueOf(), initialSupply + amount);
             });
         });
     });
@@ -464,6 +476,12 @@ describe('token', function () {
         it('check balance account3', () => {
             return token.balanceOfAsync(account3).then(expected => {
                 assert.equal(expected.valueOf(), 0);
+            });
+        });
+
+        it('totalSupply should remain the same after transferFrom', () => {
+            return token.totalSupplyAsync().then(expected => {
+                assert.equal(expected.valueOf(), initialSupply + amount);
             });
         });
     });
@@ -622,6 +640,12 @@ describe('token', function () {
             });
         });
 
+        it('totalSupply should increase after another cash in', () => {
+            return token.totalSupplyAsync().then(expected => {
+                assert.equal(expected.valueOf(), initialSupply + 50 + amount);
+            });
+        });
+
         it('should be fulfilled', () => {
             return token.approveAndCallAsync(delegate.address, account3, 1, amount, {
                 from: account2,
@@ -640,5 +664,6 @@ describe('token', function () {
                 assert.equal(expected.valueOf(), account2);
             });
         });
+
     });
 });

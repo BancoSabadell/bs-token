@@ -10,8 +10,7 @@ contract BSToken is Ownable {
     string public name;
     string public symbol;
     uint8 public decimals;
-    /* Total token supply */
-    uint256 public totalSupply;
+
     mapping (address => bool) public frozenAccount;
 
     BSTokenData internal tokenData;
@@ -35,7 +34,6 @@ contract BSToken is Ownable {
         ) {
         tokenData = new BSTokenData();
         tokenData.addToBalance(msg.sender, initialSupply);
-        totalSupply = initialSupply;
         name = tokenName;                                   // Set the name for display purposes
         symbol = tokenSymbol;                               // Set the symbol for display purposes
         decimals = decimalUnits;                            // Amount of decimals for display purposes
@@ -44,6 +42,11 @@ contract BSToken is Ownable {
     /* Get the account balance */
     function balanceOf(address account) constant returns (uint256) {
         return tokenData.balanceOf(account);
+    }
+
+    /* Get the total token supply */
+    function totalSupply() constant returns (uint256) {
+        return tokenData.totalSupply();
     }
 
     /* Send 'value' amount of tokens to address 'to' */
@@ -94,7 +97,6 @@ contract BSToken is Ownable {
     function cashIn(address target, uint256 amount)
         onlyOwner stopInEmergency accountIsNotFrozen(target) {
         tokenData.addToBalance(target, amount);
-        totalSupply += amount;
         Transfer(0, this, amount);
         Transfer(this, target, amount);
     }
@@ -102,7 +104,6 @@ contract BSToken is Ownable {
     function cashOut(uint256 amount, string bankAccount)
         stopInEmergency accountIsNotFrozen(msg.sender) enoughFunds(msg.sender, amount) {
         tokenData.addToBalance(msg.sender, -amount);
-        totalSupply -= amount;
         CashOut(msg.sender, amount, bankAccount);
     }
 
