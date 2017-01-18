@@ -1,5 +1,6 @@
 import "Ownable.sol";
 import "TokenRecipient.sol";
+import "BSTokenData.sol";
 
 pragma solidity ^0.4.2;
 
@@ -12,8 +13,9 @@ contract BSToken is Ownable {
     /* Total token supply */
     uint256 public totalSupply;
     mapping (address => bool) public frozenAccount;
-    /* Get the account balance */
-    mapping (address => uint256) public balanceOf;
+
+    BSTokenData internal tokenData;
+
     /* Returns the amount which _spender is still allowed to withdraw from _owner */
     mapping (address => mapping (address => uint256)) public allowance;
 
@@ -31,19 +33,25 @@ contract BSToken is Ownable {
         uint8 decimalUnits,
         string tokenSymbol
         ) {
-        balanceOf[msg.sender] = initialSupply;
+        tokenData = new BSTokenData();
+        tokenData.addToBalance(msg.sender, initialSupply);
         totalSupply = initialSupply;
         name = tokenName;                                   // Set the name for display purposes
         symbol = tokenSymbol;                               // Set the symbol for display purposes
         decimals = decimalUnits;                            // Amount of decimals for display purposes
     }
 
+    /* Get the account balance */
+    function balanceOf(address account) constant returns (uint256) {
+        return tokenData.balanceOf(account);
+    }
+
     /* Send 'value' amount of tokens to address 'to' */
     function transfer(address to, uint256 value)
         stopInEmergency accountIsNotFrozen(msg.sender) enoughFunds(msg.sender, value) {
-        if (balanceOf[to] + value < balanceOf[to]) throw; // Check for overflows
-        balanceOf[msg.sender] -= value;
-        balanceOf[to] += value;
+        if (tokenData.balanceOf(to) + value < tokenData.balanceOf(to)) throw; // Check for overflows
+        tokenData.addToBalance(msg.sender, -value);
+        tokenData.addToBalance(to, value);
         Transfer(msg.sender, to, value);
     }
 
@@ -57,10 +65,10 @@ contract BSToken is Ownable {
      */
     function transferFrom(address from, address to, uint256 value)
     stopInEmergency accountIsNotFrozen(from) enoughFunds(from, value) {
-        if (balanceOf[to] + value < balanceOf[to]) throw;  // Check for overflows
+        if (tokenData.balanceOf(to) + value < tokenData.balanceOf(to)) throw;  // Check for overflows
         if (value > allowance[from][msg.sender]) throw;
-        balanceOf[from] -= value;
-        balanceOf[to] += value;
+        tokenData.addToBalance(from, -value);
+        tokenData.addToBalance(to, value);
         allowance[from][msg.sender] -= value;
         Transfer(from, to, value);
     }
@@ -85,7 +93,7 @@ contract BSToken is Ownable {
 
     function cashIn(address target, uint256 amount)
         onlyOwner stopInEmergency accountIsNotFrozen(target) {
-        balanceOf[target] += amount;
+        tokenData.addToBalance(target, amount);
         totalSupply += amount;
         Transfer(0, this, amount);
         Transfer(this, target, amount);
@@ -93,7 +101,7 @@ contract BSToken is Ownable {
 
     function cashOut(uint256 amount, string bankAccount)
         stopInEmergency accountIsNotFrozen(msg.sender) enoughFunds(msg.sender, amount) {
-        balanceOf[msg.sender] -= amount;
+        tokenData.addToBalance(msg.sender, -amount);
         totalSupply -= amount;
         CashOut(msg.sender, amount, bankAccount);
     }
@@ -110,7 +118,7 @@ contract BSToken is Ownable {
     }
 
     modifier enoughFunds(address target, uint256 amount) {
-        if (balanceOf[target] < amount)
+        if (tokenData.balanceOf(target) < amount)
             throw;
         _;
     }

@@ -46,6 +46,7 @@ describe('token', function () {
             const sources = {
                 'TokenRecipient.sol': fs.readFileSync('./contracts/TokenRecipient.sol', 'utf8'),
                 'Ownable.sol': fs.readFileSync('./contracts/Ownable.sol', 'utf8'),
+                'BSTokenData.sol': fs.readFileSync('./contracts/BSTokenData.sol', 'utf8'),
                 'BSToken.sol': fs.readFileSync('./contracts/BSToken.sol', 'utf8')
             };
 
@@ -68,6 +69,7 @@ describe('token', function () {
                 'TokenRecipient.sol': fs.readFileSync('./contracts/TokenRecipient.sol', 'utf8'),
                 'Ownable.sol': fs.readFileSync('./contracts/Ownable.sol', 'utf8'),
                 'BSToken.sol': fs.readFileSync('./contracts/BSToken.sol', 'utf8'),
+                'BSTokenData.sol': fs.readFileSync('./contracts/BSTokenData.sol', 'utf8'),
                 'BSTokenDelegate.sol': fs.readFileSync('./test/BSTokenDelegate.sol', 'utf8')
             };
 
