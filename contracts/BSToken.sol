@@ -13,9 +13,6 @@ contract BSToken is Ownable {
 
     BSTokenData internal tokenData;
 
-    /* Returns the amount which _spender is still allowed to withdraw from _owner */
-    mapping (address => mapping (address => uint256)) public allowance;
-
     /* Triggered when tokens are transferred */
     event Transfer(address indexed from, address indexed to, uint256 value);
     /* Triggered whenever approve() is called */
@@ -51,6 +48,11 @@ contract BSToken is Ownable {
         return tokenData.frozenAccount(account);
     }
 
+    /* Returns the amount which 'spender' is still allowed to withdraw from 'account' */
+    function allowance(address account, address spender) constant returns (uint256) {
+        return tokenData.allowance(account, spender);
+    }
+
     /* Send 'value' amount of tokens to address 'to' */
     function transfer(address to, uint256 value)
         stopInEmergency accountIsNotFrozen(msg.sender) enoughFunds(msg.sender, value) {
@@ -71,10 +73,10 @@ contract BSToken is Ownable {
     function transferFrom(address from, address to, uint256 value)
     stopInEmergency accountIsNotFrozen(from) enoughFunds(from, value) {
         if (tokenData.balanceOf(to) + value < tokenData.balanceOf(to)) throw;  // Check for overflows
-        if (value > allowance[from][msg.sender]) throw;
+        if (value > tokenData.allowance(from, msg.sender)) throw;
         tokenData.addToBalance(from, -value);
         tokenData.addToBalance(to, value);
-        allowance[from][msg.sender] -= value;
+        tokenData.reduceAllowance(from, msg.sender, value);
         Transfer(from, to, value);
     }
 
@@ -84,7 +86,7 @@ contract BSToken is Ownable {
      */
     function approve(address spender, uint256 value)
         stopInEmergency accountIsNotFrozen(msg.sender) enoughFunds(msg.sender, value){
-        allowance[msg.sender][spender] = value;
+        tokenData.approve(msg.sender, spender, value);
         Approval(msg.sender, spender, value);
     }
 
