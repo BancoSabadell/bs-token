@@ -9,7 +9,7 @@ contract BSTokenData is Ownable {
     /* Get the account balance */
     mapping (address => uint256) public balanceOf;
     
-    function addToBalance(address account, uint256 amount) {
+    function addToBalance(address account, uint256 amount) onlyOwner {
         balanceOf[account] += amount;
         totalSupply += amount;
     }
