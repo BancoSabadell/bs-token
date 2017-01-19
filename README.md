@@ -1,3 +1,3 @@
-# bs-token
+# bs-token 
 
 ### BSToken Ethereum contract and lib.
