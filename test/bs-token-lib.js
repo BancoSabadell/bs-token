@@ -385,4 +385,18 @@ describe('token', function () {
             });
         });
     });
+
+    describe('transferOwnership', () => {
+        it('check owner', () => {
+            return lib.getOwner().should.eventually.include({owner: admin});
+        });
+
+        it('should be fulfilled', () => {
+            return lib.transferOwnership(account3);
+        });
+
+        it('check owner after', () => {
+            return lib.getOwner().should.eventually.include({owner: account3});
+        });
+    });
 });
