@@ -211,7 +211,7 @@ class BSToken {
 }
 
 module.exports = BSToken;
-module.exports.sources = {
+module.exports.contracts = {
     'TokenRecipient.sol': fs.readFileSync('./contracts/TokenRecipient.sol', 'utf8'),
     'Ownable.sol': fs.readFileSync('./contracts/Ownable.sol', 'utf8'),
     'BSTokenData.sol': fs.readFileSync('./contracts/BSTokenData.sol', 'utf8'),

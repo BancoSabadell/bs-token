@@ -52,7 +52,7 @@ describe('token', function () {
                 gas: 3000000
             });
 
-            return deployer.deployContracts(BSToken.sources, paramsConstructor, ['BSToken']).then(contracts => {
+            return deployer.deployContracts(BSToken.contracts, paramsConstructor, ['BSToken']).then(contracts => {
                 lib = new BSToken(web3, {
                     admin: {
                         account: admin,
@@ -70,7 +70,7 @@ describe('token', function () {
         }).timeout(20000);
 
         it('deploy delegate contract', () => {
-            BSToken.sources['BSTokenDelegate.sol'] = fs.readFileSync('./test/BSTokenDelegate.sol', 'utf8');
+            BSToken.contracts['BSTokenDelegate.sol'] = fs.readFileSync('./test/BSTokenDelegate.sol', 'utf8');
 
             const paramsConstructor = {'BSTokenDelegate': [lib.contract.address]};
 
@@ -80,7 +80,7 @@ describe('token', function () {
                 gas: 3000000
             });
 
-            return deployer.deployContracts(BSToken.sources, paramsConstructor, ['BSTokenDelegate']).then(contracts => {
+            return deployer.deployContracts(BSToken.contracts, paramsConstructor, ['BSTokenDelegate']).then(contracts => {
                 delegate = web3.eth.contract(contracts.BSTokenDelegate.abi).at(contracts.BSTokenDelegate.address);
                 Promise.promisifyAll(delegate);
             });
