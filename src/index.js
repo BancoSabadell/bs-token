@@ -1,5 +1,6 @@
 'use strict';
 
+const fs = require('fs');
 const Promise = require('bluebird');
 const sendgrid = require('sendgrid');
 
@@ -210,3 +211,9 @@ class BSToken {
 }
 
 module.exports = BSToken;
+module.exports.contracts = {
+    'TokenRecipient.sol': fs.readFileSync('./contracts/TokenRecipient.sol', 'utf8'),
+    'Ownable.sol': fs.readFileSync('./contracts/Ownable.sol', 'utf8'),
+    'BSTokenData.sol': fs.readFileSync('./contracts/BSTokenData.sol', 'utf8'),
+    'BSToken.sol': fs.readFileSync('./contracts/BSToken.sol', 'utf8')
+}

@@ -7,6 +7,7 @@ const Web3 = require('web3');
 const Promise = require('bluebird');
 const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
+const BSToken = require('../src/index');
 
 const web3 = new Web3(TestRPC.provider());
 const assert = chai.assert;
@@ -43,13 +44,6 @@ describe('token', function () {
         });
 
         it('deploy contracts', () => {
-            const sources = {
-                'TokenRecipient.sol': fs.readFileSync('./contracts/TokenRecipient.sol', 'utf8'),
-                'Ownable.sol': fs.readFileSync('./contracts/Ownable.sol', 'utf8'),
-                'BSTokenData.sol': fs.readFileSync('./contracts/BSTokenData.sol', 'utf8'),
-                'BSToken.sol': fs.readFileSync('./contracts/BSToken.sol', 'utf8')
-            };
-
             const paramsConstructor = {'BSToken': [initialSupply, name, decimalUnits, symbol]};
 
             const deployer = new Deployer({
@@ -58,20 +52,14 @@ describe('token', function () {
                 gas: 3000000
             });
 
-            return deployer.deployContracts(sources, paramsConstructor, ['BSToken']).then(contracts => {
+            return deployer.deployContracts(BSToken.contracts, paramsConstructor, ['BSToken']).then(contracts => {
                 token = web3.eth.contract(contracts.BSToken.abi).at(contracts.BSToken.address);
                 Promise.promisifyAll(token);
             });
         }).timeout(20000);
 
         it('deploy delegate contract', () => {
-            const sources = {
-                'TokenRecipient.sol': fs.readFileSync('./contracts/TokenRecipient.sol', 'utf8'),
-                'Ownable.sol': fs.readFileSync('./contracts/Ownable.sol', 'utf8'),
-                'BSToken.sol': fs.readFileSync('./contracts/BSToken.sol', 'utf8'),
-                'BSTokenData.sol': fs.readFileSync('./contracts/BSTokenData.sol', 'utf8'),
-                'BSTokenDelegate.sol': fs.readFileSync('./test/BSTokenDelegate.sol', 'utf8')
-            };
+            BSToken.contracts['BSTokenDelegate.sol'] = fs.readFileSync('./test/BSTokenDelegate.sol', 'utf8');
 
             const paramsConstructor = {'BSTokenDelegate': [token.address]};
 
@@ -81,7 +69,7 @@ describe('token', function () {
                 gas: 3000000
             });
 
-            return deployer.deployContracts(sources, paramsConstructor, ['BSTokenDelegate']).then(contracts => {
+            return deployer.deployContracts(BSToken.contracts, paramsConstructor, ['BSTokenDelegate']).then(contracts => {
                 delegate = web3.eth.contract(contracts.BSTokenDelegate.abi).at(contracts.BSTokenDelegate.address);
                 Promise.promisifyAll(delegate);
             });
