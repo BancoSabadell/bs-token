@@ -40,7 +40,7 @@ contract Ownable {
     stopped = false;
   }
 
-  function getOwner() returns (address out) {
+  function getOwner() constant returns (address out) {
     return owner;
   }
 }

@@ -44,12 +44,6 @@ describe('token', function () {
         });
 
         it('deploy contracts', () => {
-            const sources = {
-                'TokenRecipient.sol': fs.readFileSync('./contracts/TokenRecipient.sol', 'utf8'),
-                'Ownable.sol': fs.readFileSync('./contracts/Ownable.sol', 'utf8'),
-                'BSToken.sol': fs.readFileSync('./contracts/BSToken.sol', 'utf8')
-            };
-
             const paramsConstructor = {'BSToken': [initialSupply, name, decimalUnits, symbol]};
 
             const deployer = new Deployer({
@@ -58,7 +52,7 @@ describe('token', function () {
                 gas: 3000000
             });
 
-            return deployer.deployContracts(sources, paramsConstructor, ['BSToken']).then(contracts => {
+            return deployer.deployContracts(BSToken.contracts, paramsConstructor, ['BSToken']).then(contracts => {
                 lib = new BSToken(web3, {
                     admin: {
                         account: admin,
@@ -76,12 +70,7 @@ describe('token', function () {
         }).timeout(20000);
 
         it('deploy delegate contract', () => {
-            const sources = {
-                'TokenRecipient.sol': fs.readFileSync('./contracts/TokenRecipient.sol', 'utf8'),
-                'Ownable.sol': fs.readFileSync('./contracts/Ownable.sol', 'utf8'),
-                'BSToken.sol': fs.readFileSync('./contracts/BSToken.sol', 'utf8'),
-                'BSTokenDelegate.sol': fs.readFileSync('./test/BSTokenDelegate.sol', 'utf8')
-            };
+            BSToken.contracts['BSTokenDelegate.sol'] = fs.readFileSync('./test/BSTokenDelegate.sol', 'utf8');
 
             const paramsConstructor = {'BSTokenDelegate': [lib.contract.address]};
 
@@ -91,7 +80,7 @@ describe('token', function () {
                 gas: 3000000
             });
 
-            return deployer.deployContracts(sources, paramsConstructor, ['BSTokenDelegate']).then(contracts => {
+            return deployer.deployContracts(BSToken.contracts, paramsConstructor, ['BSTokenDelegate']).then(contracts => {
                 delegate = web3.eth.contract(contracts.BSTokenDelegate.abi).at(contracts.BSTokenDelegate.address);
                 Promise.promisifyAll(delegate);
             });
@@ -381,6 +370,20 @@ describe('token', function () {
             return delegate.someAddressAsync().then(expected => {
                 assert.equal(expected.valueOf(), account2);
             });
+        });
+    });
+
+    describe('transferOwnership', () => {
+        it('check owner', () => {
+            return lib.getOwner().should.eventually.include({owner: admin});
+        });
+
+        it('should be fulfilled', () => {
+            return lib.transferOwnership(account3);
+        });
+
+        it('check owner after', () => {
+            return lib.getOwner().should.eventually.include({owner: account3});
         });
     });
 });
