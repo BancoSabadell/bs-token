@@ -59,6 +59,20 @@ class BSToken {
             });
     }
 
+    transferOwnership(target) {
+        return this.unlockAdminAccount()
+            .then(() => this.contract.transferOwnershipAsync(target, {
+                from: this.config.admin.account,
+                gas: 3000000
+            }))
+            .then(tx => ({ tx }));
+    }
+
+    getOwner() {
+        return this.contract.getOwnerAsync()
+            .then(owner => ({ owner }));
+    }
+
     enoughAllowanceFundsCheck(spender, target, required) {
         return this.contract.allowanceAsync(target, spender)
             .then((amount) => {

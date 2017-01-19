@@ -666,4 +666,34 @@ describe('token', function () {
         });
 
     });
+
+    describe('transferOwnership', () => {
+        it('should be rejected if the account is not the owner', () => {
+            const promise = token.transferOwnershipAsync(account3, {
+                from: account2,
+                gas: 3000000
+            });
+
+            return promise.should.eventually.be.rejected
+        });
+
+        it('check owner remains the same', () => {
+            return token.getOwnerAsync().then(expected => {
+                assert.equal(expected.valueOf(), admin);
+            });
+        });
+
+        it('should be fulfilled', () => {
+            return token.transferOwnershipAsync(account3, {
+                from: admin,
+                gas: 3000000
+            });
+        });
+
+        it('check owner has been updated', () => {
+            return token.getOwnerAsync().then(expected => {
+                assert.equal(expected.valueOf(), account3);
+            });
+        });
+    });
 });
