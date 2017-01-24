@@ -15,13 +15,28 @@ contract BSTokenData is Ownable {
     /* Accounts or "wallets" */
     mapping (address => Account) internal accounts;
 
-    function balanceOf(address account) onlyOwner constant returns (uint256) {
+    function setBalance(address account, uint256 balance) onlyOwner {
+        accounts[account].balance = balance;
+    }
+
+    function getBalance(address account) onlyOwner constant returns (uint256) {
         return accounts[account].balance;
     }
 
-    function addToBalance(address account, uint256 amount) onlyOwner {
-        accounts[account].balance += amount;
-        totalSupply += amount;
+    function setTotalSupply(uint256 aTotalSupply) onlyOwner {
+        totalSupply = aTotalSupply;
+    }
+
+    function getTotalSupply() onlyOwner returns (uint256) {
+        return totalSupply;
+    }
+
+    function setAllowance(address account, address spender, uint256 amount) onlyOwner {
+        accounts[account].allowance[spender] = amount;
+    }
+
+    function getAllowance(address account, address spender) onlyOwner constant returns (uint256) {
+        return accounts[account].allowance[spender];
     }
 
     function freezeAccount(address account, bool freeze) onlyOwner {
@@ -31,17 +46,4 @@ contract BSTokenData is Ownable {
     function frozenAccount(address account) onlyOwner constant returns (bool) {
         return accounts[account].frozen;
     }
-
-    function approve(address account, address spender, uint256 amount) onlyOwner {
-        accounts[account].allowance[spender] = amount;
-    }
-
-    function allowance(address account, address spender) onlyOwner constant returns (uint256) {
-        return accounts[account].allowance[spender];
-    }
-
-    function reduceAllowance(address account, address spender, uint256 amount) onlyOwner {
-        accounts[account].allowance[spender] -= amount;
-    }
-
 }
