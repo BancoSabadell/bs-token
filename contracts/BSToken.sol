@@ -28,7 +28,8 @@ contract BSToken is Ownable {
         string tokenSymbol
         ) {
         tokenData = new BSTokenData();
-        tokenData.addToBalance(msg.sender, initialSupply);
+        tokenData.setBalance(msg.sender, initialSupply);
+        tokenData.setTotalSupply(initialSupply);
         name = tokenName;                                   // Set the name for display purposes
         symbol = tokenSymbol;                               // Set the symbol for display purposes
         decimals = decimalUnits;                            // Amount of decimals for display purposes
@@ -36,7 +37,7 @@ contract BSToken is Ownable {
 
     /* Get the account balance */
     function balanceOf(address account) constant returns (uint256) {
-        return tokenData.balanceOf(account);
+        return tokenData.getBalance(account);
     }
 
     /* Get the total token supply */
@@ -50,15 +51,17 @@ contract BSToken is Ownable {
 
     /* Returns the amount which 'spender' is still allowed to withdraw from 'account' */
     function allowance(address account, address spender) constant returns (uint256) {
-        return tokenData.allowance(account, spender);
+        return tokenData.getAllowance(account, spender);
     }
 
     /* Send 'value' amount of tokens to address 'to' */
     function transfer(address to, uint256 value)
         stopInEmergency accountIsNotFrozen(msg.sender) enoughFunds(msg.sender, value) {
-        if (tokenData.balanceOf(to) + value < tokenData.balanceOf(to)) throw; // Check for overflows
-        tokenData.addToBalance(msg.sender, -value);
-        tokenData.addToBalance(to, value);
+        if (tokenData.getBalance(to) + value < tokenData.getBalance(to)) throw; // Check for overflows
+
+        tokenData.setBalance(msg.sender, tokenData.getBalance(msg.sender) - value);
+        tokenData.setBalance(to, tokenData.getBalance(to) + value);
+
         Transfer(msg.sender, to, value);
     }
 
@@ -72,11 +75,14 @@ contract BSToken is Ownable {
      */
     function transferFrom(address from, address to, uint256 value)
     stopInEmergency accountIsNotFrozen(from) enoughFunds(from, value) {
-        if (tokenData.balanceOf(to) + value < tokenData.balanceOf(to)) throw;  // Check for overflows
-        if (value > tokenData.allowance(from, msg.sender)) throw;
-        tokenData.addToBalance(from, -value);
-        tokenData.addToBalance(to, value);
-        tokenData.reduceAllowance(from, msg.sender, value);
+        uint256 allowance = tokenData.getAllowance(from, msg.sender);
+        if (tokenData.getBalance(to) + value < tokenData.getBalance(to)) throw;  // Check for overflows
+        if (value > allowance) throw;
+
+        tokenData.setBalance(from, tokenData.getBalance(from) - value);
+        tokenData.setBalance(to, tokenData.getBalance(to) + value);
+        tokenData.setAllowance(from, msg.sender, allowance - value);
+
         Transfer(from, to, value);
     }
 
@@ -85,8 +91,8 @@ contract BSToken is Ownable {
      allowance with 'value'.
      */
     function approve(address spender, uint256 value)
-        stopInEmergency accountIsNotFrozen(msg.sender) enoughFunds(msg.sender, value){
-        tokenData.approve(msg.sender, spender, value);
+        stopInEmergency accountIsNotFrozen(msg.sender) enoughFunds(msg.sender, value) {
+        tokenData.setAllowance(msg.sender, spender, value);
         Approval(msg.sender, spender, value);
     }
 
@@ -100,14 +106,16 @@ contract BSToken is Ownable {
 
     function cashIn(address target, uint256 amount)
         onlyOwner stopInEmergency accountIsNotFrozen(target) {
-        tokenData.addToBalance(target, amount);
+        tokenData.setBalance(target, tokenData.getBalance(target) + amount);
+        tokenData.setTotalSupply(tokenData.getTotalSupply() + amount);
         Transfer(0, this, amount);
         Transfer(this, target, amount);
     }
 
     function cashOut(uint256 amount, string bankAccount)
         stopInEmergency accountIsNotFrozen(msg.sender) enoughFunds(msg.sender, amount) {
-        tokenData.addToBalance(msg.sender, -amount);
+        tokenData.setBalance(msg.sender, tokenData.getBalance(msg.sender) - amount);
+        tokenData.setTotalSupply(tokenData.getTotalSupply() - amount);
         CashOut(msg.sender, amount, bankAccount);
     }
 
@@ -123,7 +131,7 @@ contract BSToken is Ownable {
     }
 
     modifier enoughFunds(address target, uint256 amount) {
-        if (tokenData.balanceOf(target) < amount)
+        if (tokenData.getBalance(target) < amount)
             throw;
         _;
     }
