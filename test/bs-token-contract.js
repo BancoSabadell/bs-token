@@ -8,6 +8,7 @@ const Promise = require('bluebird');
 const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
 const BSToken = require('../src/index');
+const BigNumber = require('bignumber.js');
 
 const web3 = new Web3(TestRPC.provider());
 const assert = chai.assert;
@@ -260,13 +261,14 @@ describe('token', function () {
             });
         });
 
-        it('should be rejected if there is not enough funds', () => {
-            const promise = token.transferAsync(account3, amount + amount, {
+        it('should fail if there is not enough funds', () => {
+            token.transferAsync(account3, amount + amount, {
                 from: account2,
                 gas: 3000000
             });
 
-            return promise.should.eventually.be.rejected
+            return token.balanceOfAsync(account3)
+                .should.eventually.satisfy(r => r.equals(new BigNumber(0)), 'balance should be 0');
         });
 
         it('should be fulfilled', () => {
@@ -446,13 +448,13 @@ describe('token', function () {
             });
         });
 
-        it('should be rejected if there is not allowance for the delegate', () => {
-            const promise = token.transferFromAsync(account2, account3, amount, {
+        it('should fail if there is not allowance for the delegate', () => {
+            token.transferFromAsync(account2, account3, amount, {
                 from: accountDelegate,
                 gas: 3000000
             });
-
-            return promise.should.eventually.be.rejected
+            return token.balanceOfAsync(account3)
+                .should.eventually.satisfy(r => r.equals(new BigNumber(0)), 'balance should be 0');
         });
 
         it('check balance account2', () => {

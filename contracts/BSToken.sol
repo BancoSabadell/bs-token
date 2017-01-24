@@ -1,10 +1,11 @@
 import "Ownable.sol";
 import "TokenRecipient.sol";
 import "BSTokenData.sol";
+import "Token.sol";
 
 pragma solidity ^0.4.2;
 
-contract BSToken is Ownable {
+contract BSToken is Token, Ownable {
     /* Public variables of the token */
     string public standard = 'BSToken 0.1';
     string public name;
@@ -13,10 +14,6 @@ contract BSToken is Ownable {
 
     BSTokenData internal tokenData;
 
-    /* Triggered when tokens are transferred */
-    event Transfer(address indexed from, address indexed to, uint256 value);
-    /* Triggered whenever approve() is called */
-    event Approval(address indexed owner, address indexed spender, uint256 value);
     event CashOut(address indexed receiver, uint256 amount, string bankAccount);
     event FrozenFunds(address target, bool frozen);
 
@@ -56,13 +53,17 @@ contract BSToken is Ownable {
 
     /* Send 'value' amount of tokens to address 'to' */
     function transfer(address to, uint256 value)
-        stopInEmergency accountIsNotFrozen(msg.sender) enoughFunds(msg.sender, value) {
+        stopInEmergency accountIsNotFrozen(msg.sender) returns (bool success) {
         if (tokenData.getBalance(to) + value < tokenData.getBalance(to)) throw; // Check for overflows
 
-        tokenData.setBalance(msg.sender, tokenData.getBalance(msg.sender) - value);
-        tokenData.setBalance(to, tokenData.getBalance(to) + value);
-
-        Transfer(msg.sender, to, value);
+        if (tokenData.getBalance(msg.sender) >= value && value > 0) {
+            tokenData.setBalance(msg.sender, tokenData.getBalance(msg.sender) - value);
+            tokenData.setBalance(to, tokenData.getBalance(to) + value);
+            Transfer(msg.sender, to, value);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /* Send 'value' amount of tokens from address 'from' to address 'to'
@@ -74,16 +75,18 @@ contract BSToken is Ownable {
      mechanism
      */
     function transferFrom(address from, address to, uint256 value)
-    stopInEmergency accountIsNotFrozen(from) enoughFunds(from, value) {
-        uint256 allowance = tokenData.getAllowance(from, msg.sender);
+    stopInEmergency accountIsNotFrozen(from) enoughFunds(from, value) returns (bool success) {
         if (tokenData.getBalance(to) + value < tokenData.getBalance(to)) throw;  // Check for overflows
-        if (value > allowance) throw;
 
-        tokenData.setBalance(from, tokenData.getBalance(from) - value);
-        tokenData.setBalance(to, tokenData.getBalance(to) + value);
-        tokenData.setAllowance(from, msg.sender, allowance - value);
-
-        Transfer(from, to, value);
+        if (tokenData.getBalance(from) >= value && tokenData.getAllowance(from, msg.sender) >= value && value > 0) {
+            tokenData.setBalance(to, tokenData.getBalance(to) + value);
+            tokenData.setBalance(from, tokenData.getBalance(from) - value);
+            tokenData.setAllowance(from, msg.sender, tokenData.getAllowance(from, msg.sender) - value);
+            Transfer(from, to, value);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /* Allow 'spender' to withdraw from your account, multiple times, up to the
@@ -91,9 +94,10 @@ contract BSToken is Ownable {
      allowance with 'value'.
      */
     function approve(address spender, uint256 value)
-        stopInEmergency accountIsNotFrozen(msg.sender) enoughFunds(msg.sender, value) {
+        stopInEmergency accountIsNotFrozen(msg.sender) enoughFunds(msg.sender, value) returns (bool success) {
         tokenData.setAllowance(msg.sender, spender, value);
         Approval(msg.sender, spender, value);
+        return true;
     }
 
     /* Approve and then communicate the approved contract in a single tx */
