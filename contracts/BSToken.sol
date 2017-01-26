@@ -1,69 +1,59 @@
 import "Ownable.sol";
 import "TokenRecipient.sol";
 import "BSTokenData.sol";
-import "Token.sol";
+import "Stoppable.sol";
 
 pragma solidity ^0.4.2;
 
-contract BSToken is Token, Ownable {
-    /* Public variables of the token */
-    string public standard = 'BSToken 0.1';
-    string public name;
-    string public symbol;
-    uint8 public decimals;
+contract BSToken is Stoppable {
 
     BSTokenData internal tokenData;
 
-    event CashOut(address indexed receiver, uint256 amount, string bankAccount);
-    event FrozenFunds(address target, bool frozen);
-
     /* Initializes contract with initial supply tokens to the creator of the contract */
-    function BSToken(
-        uint256 initialSupply,
-        string tokenName,
-        uint8 decimalUnits,
-        string tokenSymbol
-        ) {
-        tokenData = new BSTokenData();
-        tokenData.setBalance(msg.sender, initialSupply);
-        tokenData.setTotalSupply(initialSupply);
-        name = tokenName;                                   // Set the name for display purposes
-        symbol = tokenSymbol;                               // Set the symbol for display purposes
-        decimals = decimalUnits;                            // Amount of decimals for display purposes
+    function BSToken(address tokenData) {
+        tokenData = BSTokenData(tokenData);
     }
 
     /* Get the account balance */
-    function balanceOf(address account) constant returns (uint256) {
-        return tokenData.getBalance(account);
+    function balanceOf(address account)
+        onlyFrontend
+        constant returns (uint256) {
+            return tokenData.getBalance(account);
     }
 
     /* Get the total token supply */
-    function totalSupply() constant returns (uint256) {
-        return tokenData.totalSupply();
+    function totalSupply()
+        onlyFrontend
+        constant returns (uint256) {
+            return tokenData.totalSupply();
     }
 
-    function frozenAccount(address account) constant returns (bool) {
-        return tokenData.frozenAccount(account);
+    function frozenAccount(address account)
+        onlyFrontend
+        constant returns (bool) {
+            return tokenData.frozenAccountForMerchant(account);
     }
 
     /* Returns the amount which 'spender' is still allowed to withdraw from 'account' */
-    function allowance(address account, address spender) constant returns (uint256) {
-        return tokenData.getAllowance(account, spender);
+    function allowance(address account, address spender)
+        onlyFrontend
+        constant returns (uint256) {
+            return tokenData.getAllowance(account, spender);
     }
 
     /* Send 'value' amount of tokens to address 'to' */
-    function transfer(address to, uint256 value)
-        stopInEmergency accountIsNotFrozen(msg.sender) returns (bool success) {
-        if (tokenData.getBalance(to) + value < tokenData.getBalance(to)) throw; // Check for overflows
+    function transfer(address sender, address to, uint256 value)
+        onlyFrontend stopInEmergency accountIsNotFrozen(sender)
+        returns (bool success) {
+            if (tokenData.getBalance(to) + value < tokenData.getBalance(to)) throw; // Check for overflows
 
-        if (tokenData.getBalance(msg.sender) >= value && value > 0) {
-            tokenData.setBalance(msg.sender, tokenData.getBalance(msg.sender) - value);
-            tokenData.setBalance(to, tokenData.getBalance(to) + value);
-            Transfer(msg.sender, to, value);
-            return true;
-        } else {
-            return false;
-        }
+            if (tokenData.getBalance(sender) >= value && value > 0) {
+                tokenData.setBalance(sender, tokenData.getBalance(sender) - value);
+                tokenData.setBalance(to, tokenData.getBalance(to) + value);
+                return true;
+            } else {
+                return false;
+            }
     }
 
     /* Send 'value' amount of tokens from address 'from' to address 'to'
@@ -74,62 +64,53 @@ contract BSToken is Token, Ownable {
      'from' account has deliberately authorized the sender of the message via some
      mechanism
      */
-    function transferFrom(address from, address to, uint256 value)
-    stopInEmergency accountIsNotFrozen(from) enoughFunds(from, value) returns (bool success) {
-        if (tokenData.getBalance(to) + value < tokenData.getBalance(to)) throw;  // Check for overflows
+    function transferFrom(address sender, address from, address to, uint256 value)
+        onlyFrontend stopInEmergency accountIsNotFrozen(from)
+        returns (bool success) {
+            if (tokenData.getBalance(to) + value < tokenData.getBalance(to)) throw;  // Check for overflows
 
-        if (tokenData.getBalance(from) >= value && tokenData.getAllowance(from, msg.sender) >= value && value > 0) {
-            tokenData.setBalance(to, tokenData.getBalance(to) + value);
-            tokenData.setBalance(from, tokenData.getBalance(from) - value);
-            tokenData.setAllowance(from, msg.sender, tokenData.getAllowance(from, msg.sender) - value);
-            Transfer(from, to, value);
-            return true;
-        } else {
-            return false;
-        }
+            if (tokenData.getBalance(from) >= value && tokenData.getAllowance(from, sender) >= value && value > 0) {
+                tokenData.setBalance(to, tokenData.getBalance(to) + value);
+                tokenData.setBalance(from, tokenData.getBalance(from) - value);
+                tokenData.setAllowance(from, sender, tokenData.getAllowance(from, sender) - value);
+                return true;
+            } else {
+                return false;
+            }
     }
 
     /* Allow 'spender' to withdraw from your account, multiple times, up to the
      'value' amount. If this function is called again it overwrites the current
      allowance with 'value'.
      */
-    function approve(address spender, uint256 value)
-        stopInEmergency accountIsNotFrozen(msg.sender) enoughFunds(msg.sender, value) returns (bool success) {
-        tokenData.setAllowance(msg.sender, spender, value);
-        Approval(msg.sender, spender, value);
-        return true;
+    function approve(address sender, address spender, uint256 value)
+        onlyFrontend stopInEmergency accountIsNotFrozen(sender) enoughFunds(sender, value)
+        returns (bool success) {
+            tokenData.setAllowance(sender, spender, value);
+            return true;
     }
 
     /* Approve and then communicate the approved contract in a single tx */
-    function approveAndCall(address spender, address to, string id, uint256 value)
-        stopInEmergency accountIsNotFrozen(msg.sender) enoughFunds(msg.sender, value) {
-        TokenRecipient delegate = TokenRecipient(spender);
-        approve(spender, value);
-        delegate.receiveApproval(msg.sender, to, id, value);
+    function approveAndCall(address sender, address spender, address to, string id, uint256 value)
+        onlyFrontend stopInEmergency accountIsNotFrozen(sender) enoughFunds(sender, value) {
+            TokenRecipient delegate = TokenRecipient(spender);
+            approve(sender, spender, value);
+            delegate.receiveApproval(sender, to, id, value);
     }
 
-    function cashIn(address target, uint256 amount)
-        onlyOwner stopInEmergency accountIsNotFrozen(target) {
-        tokenData.setBalance(target, tokenData.getBalance(target) + amount);
-        tokenData.setTotalSupply(tokenData.getTotalSupply() + amount);
-        Transfer(0, this, amount);
-        Transfer(this, target, amount);
+    function freezeAccount(address target, bool freeze)
+        onlyFrontend {
+            tokenData.freezeAccountForMerchant(target, freeze);
     }
 
-    function cashOut(uint256 amount, string bankAccount)
-        stopInEmergency accountIsNotFrozen(msg.sender) enoughFunds(msg.sender, amount) {
-        tokenData.setBalance(msg.sender, tokenData.getBalance(msg.sender) - amount);
-        tokenData.setTotalSupply(tokenData.getTotalSupply() - amount);
-        CashOut(msg.sender, amount, bankAccount);
-    }
-
-    function freezeAccount(address target, bool freeze) onlyOwner {
-        tokenData.freezeAccount(target, freeze);
-        FrozenFunds(target, freeze);
+    function cashOut(address sender, uint256 amount, string bankAccount)
+        onlyFrontend stopInEmergency accountIsNotFrozen(sender) enoughFunds(sender, amount) {
+            tokenData.setBalance(sender, tokenData.getBalance(sender) - amount);
+            tokenData.setTotalSupply(tokenData.getTotalSupply() - amount);
     }
 
     modifier accountIsNotFrozen(address target) {
-        if (tokenData.frozenAccount(target))
+        if (frozenAccount(target))
             throw;
         _;
     }
@@ -137,6 +118,11 @@ contract BSToken is Token, Ownable {
     modifier enoughFunds(address target, uint256 amount) {
         if (tokenData.getBalance(target) < amount)
             throw;
+        _;
+    }
+
+    modifier onlyFrontend {
+        if (msg.sender != owner) throw;
         _;
     }
 

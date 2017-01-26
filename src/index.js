@@ -215,7 +215,9 @@ module.exports = BSToken;
 module.exports.contracts = {
     'TokenRecipient.sol': fs.readFileSync(path.join(__dirname, '../contracts/TokenRecipient.sol'), 'utf8'),
     'Ownable.sol': fs.readFileSync(path.join(__dirname, '../contracts/Ownable.sol'), 'utf8'),
+    'Stoppable.sol': fs.readFileSync(path.join(__dirname, '../contracts/Stoppable.sol'), 'utf8'),
     'BSTokenData.sol': fs.readFileSync(path.join(__dirname, '../contracts/BSTokenData.sol'), 'utf8'),
     'BSToken.sol': fs.readFileSync(path.join(__dirname, '../contracts/BSToken.sol'), 'utf8'),
+    'BSTokenFrontend.sol': fs.readFileSync(path.join(__dirname, '../contracts/BSTokenFrontend.sol'), 'utf8'),
     'Token.sol': fs.readFileSync(path.join(__dirname, '../contracts/Token.sol'), 'utf8')
 };
