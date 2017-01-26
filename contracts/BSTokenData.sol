@@ -32,11 +32,11 @@ contract BSTokenData is Stoppable {
         return accounts[account].balance;
     }
 
-    function setTotalSupply(uint256 aTotalSupply) onlyAdmin stopInEmergency {
+    function setTotalSupply(uint256 aTotalSupply) onlyAdminOrMerchants stopInEmergency {
         totalSupply = aTotalSupply;
     }
 
-    function getTotalSupply() onlyAdminOrMerchants returns (uint256) {
+    function getTotalSupply() onlyAdminOrMerchants constant returns (uint256) {
         return totalSupply;
     }
 
