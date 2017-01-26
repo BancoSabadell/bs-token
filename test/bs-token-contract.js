@@ -599,6 +599,66 @@ describe('Token contracts', function () {
 
     });
 
+    describe('setBSToken', () => {
+        it('should be rejected if the account is not the admin', () => {
+            const promise = bsTokenFrontend.setBSTokenAsync(accountDelegate, {
+                from: account2,
+                gas: gas
+            });
+
+            return promise.should.eventually.be.rejected
+        });
+
+        it('check bsToken remains the same', () => {
+            return bsTokenFrontend.bsTokenAsync().then(expected => {
+                assert.equal(expected.valueOf(), bsToken.address);
+            });
+        });
+
+        it('should be fulfilled', () => {
+            return bsTokenFrontend.setBSTokenAsync(accountDelegate, {
+                from: admin,
+                gas: gas
+            });
+        });
+
+        it('check bsToken has been updated', () => {
+            return bsTokenFrontend.bsTokenAsync().then(expected => {
+                assert.equal(expected.valueOf(), accountDelegate);
+            });
+        });
+    });
+
+    describe('setMerchant', () => {
+        it('should be rejected if the account is not the admin', () => {
+            const promise = bsTokenFrontend.setMerchantAsync(account3, {
+                from: account2,
+                gas: gas
+            });
+
+            return promise.should.eventually.be.rejected
+        });
+
+        it('check merchant remains the same', () => {
+            return bsTokenFrontend.merchantAsync().then(expected => {
+                assert.equal(expected.valueOf(), merchant);
+            });
+        });
+
+        it('should be fulfilled', () => {
+            return bsTokenFrontend.setMerchantAsync(account3, {
+                from: admin,
+                gas: gas
+            });
+        });
+
+        it('check merchant has been updated', () => {
+            return bsTokenFrontend.merchantAsync().then(expected => {
+                assert.equal(expected.valueOf(), account3);
+            });
+        });
+    });
+
     describe('transferOwnership', () => {
         it('should be rejected if the account is not the admin', () => {
             const promise = bsTokenFrontend.transferOwnershipAsync(account3, {
@@ -625,36 +685,6 @@ describe('Token contracts', function () {
         it('check owner has been updated', () => {
             return bsTokenFrontend.ownerAsync().then(expected => {
                 assert.equal(expected.valueOf(), account3);
-            });
-        });
-    });
-
-    describe('setBSToken', () => {
-        it('should be rejected if the account is not the admin', () => {
-            const promise = bsTokenFrontend.setBSTokenAsync(accountDelegate, {
-                from: account2,
-                gas: gas
-            });
-
-            return promise.should.eventually.be.rejected
-        });
-
-        it('check bsToken remains the same', () => {
-            return bsTokenFrontend.bsTokenAsync().then(expected => {
-                assert.equal(expected.valueOf(), bsToken.address);
-            });
-        });
-
-        it('should be fulfilled', () => {
-            return bsTokenFrontend.setBSTokenAsync(bsToken.address, {
-                from: admin,
-                gas: gas
-            });
-        });
-
-        it('check bsToken has been updated', () => {
-            return bsTokenFrontend.bsTokenAsync().then(expected => {
-                assert.equal(expected.valueOf(), accountDelegate);
             });
         });
     });
