@@ -629,9 +629,9 @@ describe('Token contracts', function () {
         });
     });
 
-    describe('transferOwnership', () => {
+    describe('setBSToken', () => {
         it('should be rejected if the account is not the admin', () => {
-            const promise = bsTokenFrontend.transferOwnershipAsync(account3, {
+            const promise = bsTokenFrontend.setBSTokenAsync(accountDelegate, {
                 from: account2,
                 gas: gas
             });
@@ -639,22 +639,22 @@ describe('Token contracts', function () {
             return promise.should.eventually.be.rejected
         });
 
-        it('check owner remains the same', () => {
-            return bsTokenFrontend.ownerAsync().then(expected => {
-                assert.equal(expected.valueOf(), admin);
+        it('check bsToken remains the same', () => {
+            return bsTokenFrontend.bsTokenAsync().then(expected => {
+                assert.equal(expected.valueOf(), bsToken.address);
             });
         });
 
         it('should be fulfilled', () => {
-            return bsTokenFrontend.transferOwnershipAsync(account3, {
+            return bsTokenFrontend.setBSTokenAsync(bsToken.address, {
                 from: admin,
                 gas: gas
             });
         });
 
-        it('check owner has been updated', () => {
-            return bsTokenFrontend.ownerAsync().then(expected => {
-                assert.equal(expected.valueOf(), account3);
+        it('check bsToken has been updated', () => {
+            return bsTokenFrontend.bsTokenAsync().then(expected => {
+                assert.equal(expected.valueOf(), accountDelegate);
             });
         });
     });
