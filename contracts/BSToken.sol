@@ -83,7 +83,7 @@ contract BSToken is Stoppable {
      allowance with 'value'.
      */
     function approve(address sender, address spender, uint256 value)
-        onlyFrontend stopInEmergency accountIsNotFrozen(sender) enoughFunds(sender, value)
+        onlyFrontend stopInEmergency accountIsNotFrozen(sender)
         returns (bool success) {
             tokenData.setAllowance(sender, spender, value);
             return true;
@@ -91,7 +91,7 @@ contract BSToken is Stoppable {
 
     /* Approve and then communicate the approved contract in a single tx */
     function approveAndCall(address sender, address spender, address to, string id, uint256 value)
-        onlyFrontend stopInEmergency accountIsNotFrozen(sender) enoughFunds(sender, value) {
+        onlyFrontend stopInEmergency accountIsNotFrozen(sender) {
             TokenRecipient delegate = TokenRecipient(spender);
             approve(sender, spender, value);
             delegate.receiveApproval(sender, to, id, value);
