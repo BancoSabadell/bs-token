@@ -144,7 +144,7 @@ describe('Token contracts', function () {
             return bsTokenFrontend.startEmergencyAsync({ from: admin, gas: gas});
         });
 
-        it('stop should be fulfilled', () => {
+        it('startEmergency should be fulfilled', () => {
             return bsTokenFrontend.stopEmergencyAsync({ from: admin, gas: gas});
         });
     });
@@ -154,7 +154,7 @@ describe('Token contracts', function () {
             return bsTokenFrontend.startEmergencyAsync({ from: merchant, gas: gas});
         });
 
-        it('stop should be fulfilled', () => {
+        it('startEmergency should be fulfilled', () => {
             return bsTokenFrontend.stopEmergencyAsync({ from: merchant, gas: gas});
         });
     });
@@ -165,7 +165,7 @@ describe('Token contracts', function () {
                 .should.eventually.be.rejected;
         });
 
-        it('stop should be rejected', () => {
+        it('startEmergency should be rejected', () => {
             return bsTokenFrontend.stopEmergencyAsync({ from: account2, gas: gas})
                 .should.eventually.be.rejected;
         });
@@ -260,7 +260,7 @@ describe('Token contracts', function () {
             return promise.should.eventually.be.rejected
         });
 
-        it('stop emergency', () => {
+        it('startEmergency emergency', () => {
             return bsTokenFrontend.stopEmergencyAsync({ from: admin, gas: gas})
         });
 
@@ -340,7 +340,7 @@ describe('Token contracts', function () {
             return promise.should.eventually.be.rejected
         });
 
-        it('stop emergency', () => {
+        it('startEmergency emergency', () => {
             return bsTokenFrontend.stopEmergencyAsync({ from: admin, gas: gas})
         });
 
@@ -395,7 +395,7 @@ describe('Token contracts', function () {
             return promise.should.eventually.be.rejected
         });
 
-        it('stop emergency', () => {
+        it('startEmergency emergency', () => {
             return bsTokenFrontend.stopEmergencyAsync({ from: admin, gas: gas})
         });
 
@@ -488,7 +488,7 @@ describe('Token contracts', function () {
             return promise.should.eventually.be.rejected
         });
 
-        it('stop emergency', () => {
+        it('startEmergency emergency', () => {
             return bsTokenFrontend.stopEmergencyAsync({ from: admin, gas: gas})
         });
 
@@ -570,7 +570,7 @@ describe('Token contracts', function () {
             return promise.should.eventually.be.rejected
         });
 
-        it('stop emergency', () => {
+        it('startEmergency emergency', () => {
             return bsTokenFrontend.stopEmergencyAsync({ from: admin, gas: gas})
         });
 

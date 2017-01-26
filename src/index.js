@@ -71,7 +71,7 @@ class BSToken {
     }
 
     getOwner() {
-        return this.contract.getOwnerAsync()
+        return this.contract.ownerAsync()
             .then(owner => ({ owner }));
     }
 
@@ -103,18 +103,18 @@ class BSToken {
             .then(value => ({ amount: value.toNumber() }));
     }
 
-    stop() {
+    startEmergency() {
         return this.unlockAdminAccount()
-            .then(() => this.contract.emergencyStopAsync({
+            .then(() => this.contract.startEmergencyAsync({
                 from: this.config.admin.account,
                 gas: 3000000
             }))
             .then(tx => ({ tx }));
     }
 
-    release() {
+    stopEmergency() {
         return this.unlockAdminAccount()
-            .then(() => this.contract.releaseAsync({
+            .then(() => this.contract.stopEmergencyAsync({
                 from: this.config.admin.account,
                 gas: 3000000
             }))
@@ -172,14 +172,6 @@ class BSToken {
                 from: spender,
                 gas: 3000000
             }))
-            .then(tx => ({ tx }));
-    }
-
-    cashIn(target, amount) {
-        return Promise.join(this.stoppedCheck(), this.frozenAccountCheck(target))
-            .then(() => this.unlockAdminAccount())
-            .then(() => this.contract.cashInAsync(target, amount,
-                { from: this.config.admin.account, gas: 3000000 }))
             .then(tx => ({ tx }));
     }
 

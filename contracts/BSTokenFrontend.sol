@@ -82,6 +82,10 @@ contract BSTokenFrontend is Token, Ownable {
         bsToken.stopEmergency();
     }
 
+    function stopped() constant returns (bool) {
+        return bsToken.emergency();
+    }
+
     modifier onlyAdmin {
         if (msg.sender != owner) throw;
         _;

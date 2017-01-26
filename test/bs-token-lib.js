@@ -18,73 +18,74 @@ Promise.promisifyAll(web3.eth);
 Promise.promisifyAll(web3.personal);
 
 describe('token', function () {
-    const name = 'BSToken';
-    const symbol = 'BS';
-    const decimalUnits = 2;
-    const initialSupply = 1;
     const amount = 100;
     const bankAccount = 'g4yr4ruenir4nueicj';
 
-    var lib = null;
-    var delegate = null;
-    var admin = null;
-    var account2 = null;
-    var account3 = null;
-    var accountDelegate = null;
+    const gas = 3000000;
+    let bsTokenData = null;
+    let bsTokenFrontend = null;
+    let lib = null;
+    let bsToken = null;
+    let delegate = null;
+    const admin = '0x5bd47e61fbbf9c8b70372b6f14b068fddbd834ac';
+    const account2 = '0x25e940685e0999d4aa7bd629d739c6a04e625761';
+    const account3 = '0x6128333118cef876bd620da1efa464437470298d';
+    const accountDelegate = '0x93e17017217881d157a47c6ed6d7ae4c8d7ed2bf';
+    const merchant = '0x6128333118cef876bd620da1efa464437470298d';
 
-    describe('preconditions', () => {
-        it('populate admin, seller and buyer accounts', () => {
-            return web3.eth.getAccountsAsync()
-                .then(accounts => {
-                    admin = accounts[0];
-                    account2 = accounts[1];
-                    account3 = accounts[2];
-                    accountDelegate = accounts[3];
-                });
-        });
+    before(function() {
+        this.timeout(60000);
 
-        it('deploy contracts', () => {
-            const paramsConstructor = {'BSToken': [initialSupply, name, decimalUnits, symbol]};
+        const deployer = new Deployer({ web3: web3, address: admin, gas: gas });
+        BSToken.contracts['BSTokenDelegate.sol'] = fs.readFileSync('./test/BSTokenDelegate.sol', 'utf8');
 
-            const deployer = new Deployer({
-                web3,
-                address: admin,
-                gas: 3000000
-            });
+        return deployer.deployContracts(BSToken.contracts, {}, ['BSTokenData'])
+            .then((contracts) => {
+                bsTokenData = web3.eth.contract(contracts.BSTokenData.abi).at(contracts.BSTokenData.address);
+                Promise.promisifyAll(bsTokenData);
 
-            return deployer.deployContracts(BSToken.contracts, paramsConstructor, ['BSToken']).then(contracts => {
-                lib = new BSToken(web3, {
-                    admin: {
-                        account: admin,
-                        password: ''
-                    },
-                    contractBSToken: {
-                        abi: contracts.BSToken.abi,
-                        address: contracts.BSToken.address
-                    },
-                    sendgrid: {
-                        apiKey: ''
-                    }
-                });
-            });
-        }).timeout(20000);
+                return deployer.deployContracts(BSToken.contracts, {'BSToken': [bsTokenData.address]}, ['BSToken']);
+            })
+            .then((contracts) => {
+                bsToken = web3.eth.contract(contracts.BSToken.abi).at(contracts.BSToken.address);
+                Promise.promisifyAll(bsToken);
+                return bsTokenData.addMerchantAsync(bsToken.address, { from: admin, gas: gas });
+            })
+            .then(() => {
+                return deployer.deployContracts(BSToken.contracts, {'BSTokenFrontend': [bsToken.address]}, ['BSTokenFrontend'])
+                    .then((contracts) => {
+                        lib = new BSToken(web3, {
+                            admin: {
+                                account: admin,
+                                password: ''
+                            },
+                            contractBSToken: {
+                                abi: contracts.BSTokenFrontend.abi,
+                                address: contracts.BSTokenFrontend.address
+                            },
+                            sendgrid: {
+                                apiKey: ''
+                            }
+                        });
 
-        it('deploy delegate contract', () => {
-            BSToken.contracts['BSTokenDelegate.sol'] = fs.readFileSync('./test/BSTokenDelegate.sol', 'utf8');
+                        bsTokenFrontend = web3.eth.contract(contracts.BSTokenFrontend.abi).at(contracts.BSTokenFrontend.address);
+                        Promise.promisifyAll(bsTokenFrontend);
 
-            const paramsConstructor = {'BSTokenDelegate': [lib.contract.address]};
-
-            const deployer = new Deployer({
-                web3: web3,
-                address: admin,
-                gas: 3000000
-            });
-
-            return deployer.deployContracts(BSToken.contracts, paramsConstructor, ['BSTokenDelegate']).then(contracts => {
+                        return Promise.all(
+                            bsTokenFrontend.setMerchantAsync(merchant, { from: admin, gas: gas }),
+                            bsTokenFrontend.setBSTokenAsync(bsToken.address, { from: admin, gas: gas }),
+                            bsToken.transferOwnershipAsync(bsTokenFrontend.address, { from: admin, gas: gas })
+                        );
+                    });
+            })
+            .then(() => {
+                const paramsConstructor = {'BSTokenDelegate': [bsTokenFrontend.address]};
+                return deployer.deployContracts(BSToken.contracts, paramsConstructor, ['BSTokenDelegate']);
+            })
+            .then((contracts) => {
                 delegate = web3.eth.contract(contracts.BSTokenDelegate.abi).at(contracts.BSTokenDelegate.address);
                 Promise.promisifyAll(delegate);
             });
-        }).timeout(20000);
     });
 
     describe('freeze and unfreeze account', () => {
@@ -109,43 +110,11 @@ describe('token', function () {
         });
     });
 
-    describe('cashIn', () => {
-        it('freeze account', () => {
-            return lib.freezeAccount(account2, true);
-        });
-
-        it('should be rejected if the account is frozen', () => {
-            return lib.cashIn(account2, amount)
-                .should.eventually.be.rejectedWith(`${account2} address has been cautiously frozen`);
-        });
-
-        it('unfreeze account', () => {
-            return lib.freezeAccount(account2, false);
-        });
-
-        it('activate stopInEmergency', () => {
-            return lib.stop();
-        });
-
-        it('should be rejected if stopInEmergency', () => {
-            return lib.cashIn(account2, amount)
-                .should.eventually.be.rejectedWith(`This contract has been cautiously stopped`);
-        });
-
-        it('deactivate stopInEmergency', () => {
-            return lib.release();
-        });
-
-        it('should be fulfilled', () => {
-            return lib.cashIn(account2, amount);
-        });
-
-        it('check balance', () => {
-            return lib.balanceOf(account2).should.eventually.include({amount: amount});
-        });
-    });
-
     describe('transfer', () => {
+        it('cashIn amount to account2', () => {
+            return cashIn(account2, amount);
+        });
+
         it('freeze account', () => {
             return lib.freezeAccount(account2, true);
         });
@@ -160,7 +129,7 @@ describe('token', function () {
         });
 
         it('activate stopInEmergency', () => {
-            return lib.stop();
+            return lib.startEmergency();
         });
 
         it('should be rejected if stopInEmergency', () => {
@@ -169,7 +138,7 @@ describe('token', function () {
         });
 
         it('deactivate stopInEmergency', () => {
-            return lib.release();
+            return lib.stopEmergency();
         });
 
         it('should be rejected if there is not enough funds', () => {
@@ -205,7 +174,7 @@ describe('token', function () {
         });
 
         it('activate stopInEmergency', () => {
-            return lib.stop();
+            return lib.startEmergency();
         });
 
         it('should be rejected if stopInEmergency', () => {
@@ -214,7 +183,7 @@ describe('token', function () {
         });
 
         it('deactivate stopInEmergency', () => {
-            return lib.release();
+            return lib.stopEmergency();
         });
 
         it('should be rejected if there is not enough funds', () => {
@@ -232,47 +201,8 @@ describe('token', function () {
     });
 
     describe('transferFrom', () => {
-        it('freeze account', () => {
-            return lib.freezeAccount(account3, true);
-        });
-
-        it('should be rejected if the account is frozen', () => {
-            return lib.transferFrom(accountDelegate, '', account3, account2, amount)
-                .should.eventually.be.rejectedWith(`${account3} address has been cautiously frozen`);
-        });
-
-        it('unfreeze account', () => {
-            return lib.freezeAccount(account3, false);
-        });
-
-        it('activate stopInEmergency', () => {
-            return lib.stop();
-        });
-
-        it('should be rejected if stopInEmergency', () => {
-            return lib.transferFrom(accountDelegate, '', account3, account2, amount)
-                .should.eventually.be.rejectedWith(`This contract has been cautiously stopped`);
-        });
-
-        it('deactivate stopInEmergency', () => {
-            return lib.release();
-        });
-
-        it('should be rejected if there is not enough allowance funds', () => {
-            return lib.transferFrom(accountDelegate, '', account3, account2, amount * 2)
-                .should.eventually.be.rejectedWith(`Spender has not enough allowance funds`);
-        });
-
         it('should be fulfilled', () => {
             return lib.transferFrom(accountDelegate, '', account3, account2, amount);
-        });
-
-        it('check balance account2', () => {
-            return lib.balanceOf(account2).should.eventually.include({amount: amount});
-        });
-
-        it('check balance account3', () => {
-            return lib.balanceOf(account3).should.eventually.include({amount: 0});
         });
     });
 
@@ -291,7 +221,7 @@ describe('token', function () {
         });
 
         it('activate stopInEmergency', () => {
-            return lib.stop();
+            return lib.startEmergency();
         });
 
         it('should be rejected if stopInEmergency', () => {
@@ -300,7 +230,7 @@ describe('token', function () {
         });
 
         it('deactivate stopInEmergency', () => {
-            return lib.release();
+            return lib.stopEmergency();
         });
 
         it('should be fulfilled', () => {
@@ -337,7 +267,7 @@ describe('token', function () {
 
 
         it('activate stopInEmergency', () => {
-            return lib.stop();
+            return lib.startEmergency();
         });
 
         it('should be rejected if stopInEmergency', () => {
@@ -346,7 +276,7 @@ describe('token', function () {
         });
 
         it('deactivate stopInEmergency', () => {
-            return lib.release();
+            return lib.stopEmergency();
         });
 
         it('should be rejected if there is not enough funds', () => {
@@ -355,7 +285,7 @@ describe('token', function () {
         });
 
         it('add cash to account2', () => {
-            return lib.cashIn(account2, amount);
+            return cashIn(account2, amount);
         });
 
         it('should be fulfilled', () => {
@@ -386,4 +316,21 @@ describe('token', function () {
             return lib.getOwner().should.eventually.include({owner: account3});
         });
     });
+
+    function cashIn(target, amount) {
+        let prevBalance;
+        return bsTokenFrontend.balanceOfAsync(target)
+            .then(balance => {
+                prevBalance = Number(balance.valueOf());
+                return bsTokenData.setBalanceAsync(target, prevBalance + amount, { from: admin, gas: gas});
+            })
+            .then(() => bsTokenFrontend.balanceOfAsync(target))
+            .then((updatedBalanced) => {
+                if (Number(updatedBalanced.valueOf()) != prevBalance + amount) throw Error('After cashIn balance does not match');
+            })
+            .then(() => bsTokenData.getTotalSupplyAsync({ from: admin }))
+            .then((prevSupply) => {
+                return bsTokenData.setTotalSupplyAsync(Number(prevSupply.valueOf()) + amount, { from: admin, gas: gas});
+            })
+    }
 });
