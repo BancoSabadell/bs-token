@@ -56,9 +56,9 @@ describe('Token contracts', function () {
 
     before(function() {
 
-        this.timeout(30000);
+        this.timeout(50000);
 
-        const deployer = new Deployer({ web3: web3, address: admin, gas: 3000000 });
+        const deployer = new Deployer({ web3: web3, address: admin, gas: 4500000 });
 
         return deployer.deployContracts(BSToken.contracts, {}, ['BSTokenData'])
             .then((contracts) => {
@@ -96,22 +96,51 @@ describe('Token contracts', function () {
             });
     });
 
-    describe('freeze and unfreeze account', () => {
-        it('should be rejected if the account is not the owner', () => {
-            const promise = bsTokenFrontend.freezeAccountAsync(account2, true, {
-                from: account2,
-                gas: 3000000
-            });
-
-            return promise.should.eventually.be.rejected
-        });
-
-        it('check state account', () => {
-            return bsTokenFrontend.frozenAccountAsync(account2).then(frozen => {
-                assert.equal(frozen, false);
+    describe('check preconditions deployment', () => {
+        it('check bsTokenData owner is admin account', () => {
+            return bsTokenData.ownerAsync().then(address => {
+                assert.equal(address, admin);
             });
         });
 
+        it('check bsTokenData has added bsToken.address as a merchant', () => {
+            return bsTokenData.merchantsAsync(bsToken.address).then(added => {
+                assert.equal(added, true);
+            });
+        });
+
+        it('check BSToken has bsTokenData address as data source', () => {
+            return bsToken.tokenDataAsync().then(address => {
+                assert.equal(address, bsTokenData.address);
+            });
+        });
+
+        it('check BSToken owner is BSTokenFrontEnd', () => {
+            return bsToken.ownerAsync().then(address => {
+                assert.equal(address, bsTokenFrontend.address);
+            });
+        });
+
+        it('check BSTokenFrontEnd owner is admin account', () => {
+            return bsTokenFrontend.ownerAsync().then(address => {
+                assert.equal(address, admin);
+            });
+        });
+
+        it('check BSTokenFrontEnd has merchant account as merchant', () => {
+            return bsTokenFrontend.merchantAsync().then(address => {
+                assert.equal(address, merchant);
+            });
+        });
+
+        it('check BSTokenFrontEnd has BSToken as implementation', () => {
+            return bsTokenFrontend.bsTokenAsync().then(address => {
+                assert.equal(address, bsToken.address);
+            });
+        });
+    });
+
+    describe('freeze and unfreeze account as admin', () => {
         it('should be fulfilled', () => {
             return bsTokenFrontend.freezeAccountAsync(account2, true, {
                 from: admin,
@@ -120,22 +149,40 @@ describe('Token contracts', function () {
         });
 
         it('check state account', () => {
-            return bsTokenFrontend.frozenAccountAsync(account2).then(frozen => {
+            return bsTokenFrontend.frozenAccountAsync(account2, {from: admin}).then(frozen => {
                 assert.equal(frozen, true);
             });
         });
+    });
 
-        it('should be fulfilled', () => {
+    describe('freeze and unfreeze account as merchant', () => {
+        it('should be fulfilled as merchant', () => {
             return bsTokenFrontend.freezeAccountAsync(account2, false, {
-                from: admin,
+                from: merchant,
                 gas: 3000000
-            });
+            })
         });
 
-        it('check state account', () => {
-            return bsTokenFrontend.frozenAccountAsync(account2).then(frozen => {
+        it('check state account as merchant', () => {
+            return bsTokenFrontend.frozenAccountAsync(account2, {from: merchant}).then(frozen => {
                 assert.equal(frozen, false);
             });
+        });
+    });
+
+    describe('freeze and unfreeze account as non merchant/admin account', () => {
+        it('should be rejected', () => {
+            const promise = bsTokenFrontend.freezeAccountAsync(account2, true, {
+                from: account2,
+                gas: 3000000
+            });
+
+            return promise.should.eventually.be.rejected
+        });
+
+        it('check state account should fail', () => {
+            const promise = bsTokenFrontend.frozenAccountAsync(account2, {from: account2});
+            return promise.should.eventually.be.rejected
         });
     });
 

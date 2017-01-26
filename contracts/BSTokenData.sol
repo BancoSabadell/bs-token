@@ -78,7 +78,7 @@ contract BSTokenData is Stoppable {
     }
 
     modifier onlyAdminOrMerchants {
-        if (msg.sender != owner || !merchants[msg.sender]) throw;
+        if (msg.sender != owner && !merchants[msg.sender]) throw;
         _;
     }
 }

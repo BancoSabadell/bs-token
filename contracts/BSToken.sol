@@ -6,12 +6,11 @@ import "Stoppable.sol";
 pragma solidity ^0.4.2;
 
 contract BSToken is Stoppable {
-
-    BSTokenData internal tokenData;
+    BSTokenData public tokenData;
 
     /* Initializes contract with initial supply tokens to the creator of the contract */
-    function BSToken(address tokenData) {
-        tokenData = BSTokenData(tokenData);
+    function BSToken(address addTokenData) {
+        tokenData = BSTokenData(addTokenData);
     }
 
     /* Get the account balance */

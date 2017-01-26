@@ -8,8 +8,8 @@ contract BSTokenFrontend is Token, Ownable {
 
     event CashOut(address indexed receiver, uint256 amount, string bankAccount);
 
-    BSToken internal bsToken;
-    address internal merchant;
+    BSToken public bsToken;
+    address public merchant;
 
     function BSTokenFrontend(address addressBSToken) {
         setBSToken(addressBSToken);
@@ -81,7 +81,7 @@ contract BSTokenFrontend is Token, Ownable {
     }
 
     modifier onlyAdminOrMerchant {
-        if (msg.sender != owner || msg.sender != merchant) throw;
+        if (msg.sender != owner && msg.sender != merchant) throw;
         _;
     }
 }
