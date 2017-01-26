@@ -5,7 +5,6 @@ import "Token.sol";
 pragma solidity ^0.4.2;
 
 contract BSTokenFrontend is Token, Ownable {
-
     event CashOut(address indexed receiver, uint256 amount, string bankAccount);
 
     BSToken public bsToken;
@@ -62,7 +61,7 @@ contract BSTokenFrontend is Token, Ownable {
         bsToken.freezeAccount(target, freeze);
     }
 
-    function cashOut(uint256 amount, string bankAccount){
+    function cashOut(uint256 amount, string bankAccount) {
         CashOut(msg.sender, amount, bankAccount);
         bsToken.cashOut(msg.sender, amount, bankAccount);
     }

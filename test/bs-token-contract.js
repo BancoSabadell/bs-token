@@ -211,9 +211,10 @@ describe('Token contracts', function () {
             return promise.should.eventually.be.rejected
         });
 
-        it('check state account should fail', () => {
-            const promise = bsTokenFrontend.frozenAccountAsync(account2, {from: account2});
-            return promise.should.eventually.be.rejected
+        it('check state account as non merchant/admin account', () => {
+            return bsTokenFrontend.frozenAccountAsync(account2, {from: account2}).then(frozen => {
+                assert.equal(frozen, false);
+            });
         });
     });
 

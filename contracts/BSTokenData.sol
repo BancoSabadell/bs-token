@@ -3,7 +3,6 @@ pragma solidity ^0.4.2;
 import "Stoppable.sol";
 
 contract BSTokenData is Stoppable {
-
     string public standard = 'BSToken 0.1';
     string public name = 'BSToken';
     string public symbol = 'BST';
@@ -28,7 +27,7 @@ contract BSTokenData is Stoppable {
         accounts[account].balance = balance;
     }
 
-    function getBalance(address account) onlyAdminOrMerchants constant returns (uint256) {
+    function getBalance(address account) constant returns (uint256) {
         return accounts[account].balance;
     }
 
@@ -36,7 +35,7 @@ contract BSTokenData is Stoppable {
         totalSupply = aTotalSupply;
     }
 
-    function getTotalSupply() onlyAdminOrMerchants constant returns (uint256) {
+    function getTotalSupply() constant returns (uint256) {
         return totalSupply;
     }
 
@@ -44,7 +43,7 @@ contract BSTokenData is Stoppable {
         accounts[account].allowance[spender] = amount;
     }
 
-    function getAllowance(address account, address spender) onlyAdminOrMerchants constant returns (uint256) {
+    function getAllowance(address account, address spender) constant returns (uint256) {
         return accounts[account].allowance[spender];
     }
 
@@ -52,7 +51,7 @@ contract BSTokenData is Stoppable {
         accounts[account].frozen = freeze;
     }
 
-    function frozenAccount(address account) onlyAdmin constant returns (bool) {
+    function frozenAccount(address account) constant returns (bool) {
         return accounts[account].frozen;
     }
 
@@ -60,7 +59,7 @@ contract BSTokenData is Stoppable {
         accounts[account].frozenForMerchant[msg.sender] = freeze;
     }
 
-    function frozenAccountForMerchant(address account) onlyAdminOrMerchants constant returns (bool) {
+    function frozenAccountForMerchant(address account) constant returns (bool) {
         return accounts[account].frozenForMerchant[msg.sender];
     }
 
