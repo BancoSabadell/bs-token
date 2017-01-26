@@ -475,7 +475,6 @@ describe('Token contracts', function () {
             });
         });
 
-
         it('start emergency', () => {
             return bsTokenFrontend.startEmergencyAsync({ from: admin, gas: gas})
         });
@@ -558,11 +557,8 @@ describe('Token contracts', function () {
             });
         });
 
-        it('activate stopInEmergency', () => {
-            return bsTokenFrontend.emergencyStopAsync({
-                from: admin,
-                gas: gas
-            });
+        it('start emergency', () => {
+            return bsTokenFrontend.startEmergencyAsync({ from: admin, gas: gas})
         });
 
         it('should be rejected if stopInEmergency', () => {
@@ -574,33 +570,12 @@ describe('Token contracts', function () {
             return promise.should.eventually.be.rejected
         });
 
-        it('deactivate stopInEmergency', () => {
-            return bsTokenFrontend.releaseAsync({
-                from: admin,
-                gas: gas
-            });
-        });
-
-        it('should be rejected if there is not enough funds', () => {
-            const promise = bsTokenFrontend.approveAndCallAsync(delegate.address, account3, 1, amount, {
-                from: account2,
-                gas: gas
-            });
-
-            return promise.should.eventually.be.rejected
+        it('stop emergency', () => {
+            return bsTokenFrontend.stopEmergencyAsync({ from: admin, gas: gas})
         });
 
         it('add cash to account2', () => {
-            return bsTokenFrontend.cashInAsync(account2, amount, {
-                from: admin,
-                gas: gas
-            });
-        });
-
-        it('totalSupply should increase after another cash in', () => {
-            return bsTokenFrontend.totalSupplyAsync().then(expected => {
-                assert.equal(expected.valueOf(), 50 + amount);
-            });
+            return cashIn(account2, amount)
         });
 
         it('should be fulfilled', () => {
@@ -625,7 +600,7 @@ describe('Token contracts', function () {
     });
 
     describe('transferOwnership', () => {
-        it('should be rejected if the account is not the owner', () => {
+        it('should be rejected if the account is not the admin', () => {
             const promise = bsTokenFrontend.transferOwnershipAsync(account3, {
                 from: account2,
                 gas: gas
@@ -635,7 +610,7 @@ describe('Token contracts', function () {
         });
 
         it('check owner remains the same', () => {
-            return bsTokenFrontend.getOwnerAsync().then(expected => {
+            return bsTokenFrontend.ownerAsync().then(expected => {
                 assert.equal(expected.valueOf(), admin);
             });
         });
@@ -648,7 +623,37 @@ describe('Token contracts', function () {
         });
 
         it('check owner has been updated', () => {
-            return bsTokenFrontend.getOwnerAsync().then(expected => {
+            return bsTokenFrontend.ownerAsync().then(expected => {
+                assert.equal(expected.valueOf(), account3);
+            });
+        });
+    });
+
+    describe('transferOwnership', () => {
+        it('should be rejected if the account is not the admin', () => {
+            const promise = bsTokenFrontend.transferOwnershipAsync(account3, {
+                from: account2,
+                gas: gas
+            });
+
+            return promise.should.eventually.be.rejected
+        });
+
+        it('check owner remains the same', () => {
+            return bsTokenFrontend.ownerAsync().then(expected => {
+                assert.equal(expected.valueOf(), admin);
+            });
+        });
+
+        it('should be fulfilled', () => {
+            return bsTokenFrontend.transferOwnershipAsync(account3, {
+                from: admin,
+                gas: gas
+            });
+        });
+
+        it('check owner has been updated', () => {
+            return bsTokenFrontend.ownerAsync().then(expected => {
                 assert.equal(expected.valueOf(), account3);
             });
         });
