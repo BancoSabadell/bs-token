@@ -140,12 +140,44 @@ describe('Token contracts', function () {
         });
     });
 
+    describe('stoppable as admin', () => {
+        it('start should be fulfilled', () => {
+            return bsTokenFrontend.startEmergencyAsync({ from: admin, gas: 3000000});
+        });
+
+        it('stop should be fulfilled', () => {
+            return bsTokenFrontend.stopEmergencyAsync({ from: admin, gas: 3000000});
+        });
+    });
+
+    describe('stoppable as merchant', () => {
+        it('start should be fulfilled', () => {
+            return bsTokenFrontend.startEmergencyAsync({ from: merchant, gas: 3000000});
+        });
+
+        it('stop should be fulfilled', () => {
+            return bsTokenFrontend.stopEmergencyAsync({ from: merchant, gas: 3000000});
+        });
+    });
+
+    describe('stoppable as non merchant/admin account', () => {
+        it('start should be rejected', () => {
+            return bsTokenFrontend.startEmergencyAsync({ from: account2, gas: 3000000})
+                .should.eventually.be.rejected;
+        });
+
+        it('stop should be rejected', () => {
+            return bsTokenFrontend.stopEmergencyAsync({ from: account2, gas: 3000000})
+                .should.eventually.be.rejected;
+        });
+    });
+
     describe('freeze and unfreeze account as admin', () => {
         it('should be fulfilled', () => {
             return bsTokenFrontend.freezeAccountAsync(account2, true, {
                 from: admin,
                 gas: 3000000
-            })
+            });
         });
 
         it('check state account', () => {
@@ -160,7 +192,7 @@ describe('Token contracts', function () {
             return bsTokenFrontend.freezeAccountAsync(account2, false, {
                 from: merchant,
                 gas: 3000000
-            })
+            });
         });
 
         it('check state account as merchant', () => {
@@ -186,83 +218,12 @@ describe('Token contracts', function () {
         });
     });
 
-    describe('cashIn', () => {
-        it('should be rejected if the account is not the owner', () => {
-            const promise = bsTokenFrontend.cashInAsync(account2, amount, {
-                from: account2,
-                gas: 3000000
-            });
-
-            return promise.should.eventually.be.rejected
-        });
-
-        it('freeze account', () => {
-            return bsTokenFrontend.freezeAccountAsync(account2, true, {
-                from: admin,
-                gas: 3000000
-            });
-        });
-
-        it('should be rejected if the account is frozen', () => {
-            const promise = bsTokenFrontend.cashInAsync(account2, amount, {
-                from: admin,
-                gas: 3000000
-            });
-
-            return promise.should.eventually.be.rejected
-        });
-
-        it('unfreeze account', () => {
-            return bsTokenFrontend.freezeAccountAsync(account2, false, {
-                from: admin,
-                gas: 3000000
-            });
-        });
-
-        it('activate stopInEmergency', () => {
-            return bsTokenFrontend.emergencyStopAsync({
-                from: admin,
-                gas: 3000000
-            });
-        });
-
-        it('should be rejected if stopInEmergency', () => {
-            const promise = bsTokenFrontend.cashInAsync(account2, amount, {
-                from: admin,
-                gas: 3000000
-            });
-
-            return promise.should.eventually.be.rejected
-        });
-
-        it('deactivate stopInEmergency', () => {
-            return bsTokenFrontend.releaseAsync({
-                from: admin,
-                gas: 3000000
-            });
-        });
-
-        it('should be fulfilled', () => {
-            return bsTokenFrontend.cashInAsync(account2, amount, {
-                from: admin,
-                gas: 3000000
-            });
-        });
-
-        it('check balance', () => {
-            return bsTokenFrontend.balanceOfAsync(account2).then(expected => {
-                assert.equal(expected.valueOf(), amount);
-            });
-        });
-
-        it('check totalSupply', () => {
-            return bsTokenFrontend.totalSupplyAsync().then(expected => {
-                assert.equal(expected.valueOf(), initialSupply + amount);
-            });
-        });
-    });
-
     describe('transfer', () => {
+        it('cashIn amount to account2', () => {
+            return cashIn(account2, amount, admin);
+        });
+
+
         it('freeze account', () => {
             return bsTokenFrontend.freezeAccountAsync(account2, true, {
                 from: admin,
@@ -281,7 +242,7 @@ describe('Token contracts', function () {
 
         it('unfreeze account', () => {
             return bsTokenFrontend.freezeAccountAsync(account2, false, {
-                from: admin,
+                from: merchant,
                 gas: 3000000
             });
         });
@@ -734,4 +695,17 @@ describe('Token contracts', function () {
             });
         });
     });
+
+    function cashIn(target, amount, caller) {
+        let prevBalance;
+        return bsTokenFrontend.balanceOfAsync(target, { from: caller, gas: 3000000})
+            .then(balance => {
+                prevBalance = balance;
+                return bsTokenData.setBalanceAsync(target, prevBalance + amount, { from: caller, gas: 3000000});
+            })
+            .then(() => bsTokenFrontend.balanceOfAsync(target))
+            .then((updatedBalanced) => {
+                if (updatedBalanced != prevBalance - amount) throw Error('After cash in balacen does not match');
+            });
+    }
 });

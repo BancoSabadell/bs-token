@@ -18,5 +18,4 @@ contract Stoppable is Ownable {
     function stopEmergency() external onlyOwner {
         emergency = false;
     }
-
 }

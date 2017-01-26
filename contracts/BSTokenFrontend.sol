@@ -75,6 +75,14 @@ contract BSTokenFrontend is Token, Ownable {
         merchant = aMerchant;
     }
 
+    function startEmergency() onlyAdminOrMerchant {
+        bsToken.startEmergency();
+    }
+
+    function stopEmergency() onlyAdminOrMerchant {
+        bsToken.stopEmergency();
+    }
+
     modifier onlyAdmin {
         if (msg.sender != owner) throw;
         _;

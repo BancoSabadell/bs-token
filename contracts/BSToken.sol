@@ -9,8 +9,8 @@ contract BSToken is Stoppable {
     BSTokenData public tokenData;
 
     /* Initializes contract with initial supply tokens to the creator of the contract */
-    function BSToken(address addTokenData) {
-        tokenData = BSTokenData(addTokenData);
+    function BSToken(address bsTokenDataAddress) {
+        tokenData = BSTokenData(bsTokenDataAddress);
     }
 
     /* Get the account balance */
