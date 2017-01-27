@@ -12,24 +12,9 @@ class BSToken {
         this.contract = this.web3.eth.contract(config.contractBSToken.abi)
             .at(config.contractBSToken.address);
 
-        // watch for CashOut events
-        this.contract.CashOut((error, result) => {
-            if (!error) {
-                this.sendCashOutEmail(
-                    result.args.buyer,
-                    result.args.amount,
-                    result.args.bankAccount
-                );
-            }
-        });
-
         Promise.promisifyAll(this.web3.personal);
         Promise.promisifyAll(this.web3.eth);
         Promise.promisifyAll(this.contract);
-    }
-
-    isEthereumAddress(candidate) {
-        return this.web3.isAddress(candidate);
     }
 
     unlockAdminAccount() {
@@ -220,19 +205,6 @@ class BSToken {
     balanceOf(target) {
         return this.contract.balanceOfAsync(target)
             .then(balance => ({ amount: balance.toNumber() }));
-    }
-
-    sendCashOutEmail(target, cashOutAmount, bankAccount) {
-        const helper = sendgrid.mail;
-        const fromEmail = new helper.Email('escrow.app@bancsabadell.com');
-        const toEmail = new helper.Email('cayellasisaac@bancsabadell.com');
-        const subject = `Cash out request from ${target}`;
-        const content = new helper.Content('text/plain', `Amount: ${cashOutAmount} Bank Account: ${bankAccount} Address: ${target}`);
-        const mail = new helper.Mail(fromEmail, subject, toEmail, content);
-
-        const sg = sendgrid(this.config.sendgrid.apiKey);
-        const request = sg.emptyRequest({ method: 'POST', path: '/v3/mail/send', body: mail.toJSON() });
-        sg.API(request);
     }
 }
 
