@@ -97,45 +97,31 @@ describe('BsTokenFrontend contract', function () {
 
     describe('check preconditions deployment', () => {
         it('check bsTokenData owner is admin account', () => {
-            return bsTokenData.ownerAsync().then(address => {
-                assert.equal(address, admin);
-            });
+            return bsTokenData.ownerAsync().should.eventually.equal(admin);
         });
 
         it('check bsTokenData has added bsToken.address as a merchant', () => {
-            return bsTokenData.merchantsAsync(bsToken.address).then(added => {
-                assert.equal(added, true);
-            });
+            return bsTokenData.merchantsAsync(bsToken.address).should.eventually.be.true;
         });
 
         it('check BSToken has bsTokenData address as data source', () => {
-            return bsToken.tokenDataAsync().then(address => {
-                assert.equal(address, bsTokenData.address);
-            });
+            return bsToken.tokenDataAsync().should.eventually.equal(bsTokenData.address);
         });
 
         it('check BSToken owner is BSTokenFrontEnd', () => {
-            return bsToken.ownerAsync().then(address => {
-                assert.equal(address, bsTokenFrontend.address);
-            });
+            return bsToken.ownerAsync().should.eventually.equal(bsTokenFrontend.address);
         });
 
         it('check BSTokenFrontEnd owner is admin account', () => {
-            return bsTokenFrontend.ownerAsync().then(address => {
-                assert.equal(address, admin);
-            });
+            return bsTokenFrontend.ownerAsync().should.eventually.equal(admin);
         });
 
         it('check BSTokenFrontEnd has merchant account as merchant', () => {
-            return bsTokenFrontend.merchantAsync().then(address => {
-                assert.equal(address, merchant);
-            });
+            return bsTokenFrontend.merchantAsync().should.eventually.equal(merchant);
         });
 
         it('check BSTokenFrontEnd has BSToken as implementation', () => {
-            return bsTokenFrontend.bsTokenAsync().then(address => {
-                assert.equal(address, bsToken.address);
-            });
+            return bsTokenFrontend.bsTokenAsync().should.eventually.equal(bsToken.address);
         });
     });
 
