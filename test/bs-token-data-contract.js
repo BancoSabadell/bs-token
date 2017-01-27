@@ -48,7 +48,7 @@ describe('BsTokenData contract', function () {
     const spender = '0x93e17017217881d157a47c6ed6d7ae4c8d7ed2bf';
 
     before(function() {
-        this.timeout(10000);
+        this.timeout(60000);
 
         const deployer = new Deployer({ web3: web3, address: admin, gas: 4500000 });
 
