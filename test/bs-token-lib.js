@@ -303,6 +303,26 @@ describe('token', function () {
         });
     });
 
+    describe('setBSToken', () => {
+        it('should be fulfilled', () => {
+            return lib.setBsToken(accountDelegate);
+        });
+
+        it('check bsToken has been updated', () => {
+            return lib.getBsToken().should.eventually.include({bsToken: accountDelegate});
+        });
+    });
+
+    describe('setMerchant', () => {
+        it('should be fulfilled', () => {
+            return lib.setMerchant(account3);
+        });
+
+        it('check bsToken has been updated', () => {
+            return lib.getMerchant().should.eventually.include({merchant: account3});
+        });
+    });
+
     describe('transferOwnership', () => {
         it('check owner', () => {
             return lib.getOwner().should.eventually.include({owner: admin});

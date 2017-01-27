@@ -75,6 +75,34 @@ class BSToken {
             .then(owner => ({ owner }));
     }
 
+    setBsToken(bsToken) {
+        return this.unlockAdminAccount()
+            .then(() => this.contract.setBSTokenAsync(bsToken, {
+                from: this.config.admin.account,
+                gas: 3000000
+            }))
+            .then(tx => ({ tx }));
+    }
+
+    getBsToken() {
+        return this.contract.bsTokenAsync()
+            .then(bsToken => ({ bsToken }));
+    }
+
+    setMerchant(merchant) {
+        return this.unlockAdminAccount()
+            .then(() => this.contract.setMerchantAsync(merchant, {
+                from: this.config.admin.account,
+                gas: 3000000
+            }))
+            .then(tx => ({ tx }));
+    }
+
+    getMerchant() {
+        return this.contract.merchantAsync()
+            .then(merchant => ({ merchant }));
+    }
+
     enoughAllowanceFundsCheck(spender, target, required) {
         return this.contract.allowanceAsync(target, spender)
             .then((amount) => {
