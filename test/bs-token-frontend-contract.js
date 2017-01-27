@@ -166,9 +166,8 @@ describe('BsTokenFrontend contract', function () {
         });
 
         it('check state account', () => {
-            return bsTokenFrontend.frozenAccountAsync(account2, {from: admin}).then(frozen => {
-                assert.equal(frozen, true);
-            });
+            return bsTokenFrontend.frozenAccountAsync(account2, {from: admin})
+                .should.eventually.be.true;
         });
     });
 
@@ -181,26 +180,22 @@ describe('BsTokenFrontend contract', function () {
         });
 
         it('check state account as merchant', () => {
-            return bsTokenFrontend.frozenAccountAsync(account2, {from: merchant}).then(frozen => {
-                assert.equal(frozen, false);
-            });
+            return bsTokenFrontend.frozenAccountAsync(account2, {from: merchant})
+                .should.eventually.be.false;
         });
     });
 
     describe('freeze and unfreeze account as non merchant/admin account', () => {
         it('should be rejected', () => {
-            const promise = bsTokenFrontend.freezeAccountAsync(account2, true, {
+            return bsTokenFrontend.freezeAccountAsync(account2, true, {
                 from: account2,
                 gas: gas
-            });
-
-            return promise.should.eventually.be.rejected
+            }).should.eventually.be.rejected;
         });
 
         it('check state account as non merchant/admin account', () => {
-            return bsTokenFrontend.frozenAccountAsync(account2, {from: account2}).then(frozen => {
-                assert.equal(frozen, false);
-            });
+            return bsTokenFrontend.frozenAccountAsync(account2, {from: account2})
+                .should.eventually.be.false;
         });
     });
 
@@ -208,7 +203,6 @@ describe('BsTokenFrontend contract', function () {
         it('cashIn amount to account2', () => {
             return cashIn(account2, amount);
         });
-
 
         it('freeze account', () => {
             return bsTokenFrontend.freezeAccountAsync(account2, true, {
@@ -218,12 +212,10 @@ describe('BsTokenFrontend contract', function () {
         });
 
         it('should be rejected if the account is frozen', () => {
-            const promise = bsTokenFrontend.transferAsync(account3, amount, {
+            return bsTokenFrontend.transferAsync(account3, amount, {
                 from: account2,
                 gas: gas
-            });
-
-            return promise.should.eventually.be.rejected
+            }).should.eventually.be.rejected;
         });
 
         it('unfreeze account', () => {
@@ -238,12 +230,10 @@ describe('BsTokenFrontend contract', function () {
         });
 
         it('should be rejected if stopInEmergency', () => {
-            const promise = bsTokenFrontend.transferAsync(account3, amount, {
+            return bsTokenFrontend.transferAsync(account3, amount, {
                 from: account2,
                 gas: gas
-            });
-
-            return promise.should.eventually.be.rejected
+            }).should.eventually.be.rejected;
         });
 
         it('startEmergency emergency', () => {
@@ -268,15 +258,13 @@ describe('BsTokenFrontend contract', function () {
         });
 
         it('check balance account2', () => {
-            return bsTokenFrontend.balanceOfAsync(account2).then(expected => {
-                assert.equal(expected.valueOf(), 0);
-            });
+            return bsTokenFrontend.balanceOfAsync(account2)
+                .should.eventually.satisfy(balance => balance.equals(new BigNumber(0)));
         });
 
         it('check balance account3', () => {
-            return bsTokenFrontend.balanceOfAsync(account3).then(expected => {
-                assert.equal(expected.valueOf(), amount);
-            });
+            return bsTokenFrontend.balanceOfAsync(account3)
+                .should.eventually.satisfy(balance => balance.equals(new BigNumber(amount)));
         });
     });
 
@@ -294,7 +282,7 @@ describe('BsTokenFrontend contract', function () {
                 gas: gas
             });
 
-            return promise.should.eventually.be.rejected
+            return promise.should.eventually.be.rejected;
         });
 
         it('unfreeze account', () => {
@@ -314,7 +302,7 @@ describe('BsTokenFrontend contract', function () {
                 gas: gas
             });
 
-            return promise.should.eventually.be.rejected
+            return promise.should.eventually.be.rejected;
         });
 
         it('should be rejected if stopInEmergency', () => {
@@ -323,11 +311,11 @@ describe('BsTokenFrontend contract', function () {
                 gas: gas
             });
 
-            return promise.should.eventually.be.rejected
+            return promise.should.eventually.be.rejected;
         });
 
         it('startEmergency emergency', () => {
-            return bsTokenFrontend.stopEmergencyAsync({ from: admin, gas: gas})
+            return bsTokenFrontend.stopEmergencyAsync({ from: admin, gas: gas });
         });
 
         it('should be fulfilled', () => {
@@ -338,9 +326,8 @@ describe('BsTokenFrontend contract', function () {
         });
 
         it('check allowance', () => {
-            return bsTokenFrontend.allowanceAsync(account3, accountDelegate).then(expected => {
-                assert.equal(expected.valueOf(), amount);
-            });
+            return bsTokenFrontend.allowanceAsync(account3, accountDelegate)
+                .should.eventually.satisfy(balance => balance.equals(new BigNumber(amount)));
         });
     });
 
@@ -358,7 +345,7 @@ describe('BsTokenFrontend contract', function () {
                 gas: gas
             });
 
-            return promise.should.eventually.be.rejected
+            return promise.should.eventually.be.rejected;
         });
 
         it('unfreeze account', () => {
@@ -378,11 +365,11 @@ describe('BsTokenFrontend contract', function () {
                 gas: gas
             });
 
-            return promise.should.eventually.be.rejected
+            return promise.should.eventually.be.rejected;
         });
 
         it('startEmergency emergency', () => {
-            return bsTokenFrontend.stopEmergencyAsync({ from: admin, gas: gas})
+            return bsTokenFrontend.stopEmergencyAsync({ from: admin, gas: gas });
         });
 
         it('should be rejected if there is not enough funds', () => {
@@ -403,15 +390,13 @@ describe('BsTokenFrontend contract', function () {
         });
 
         it('check balance account2', () => {
-            return bsTokenFrontend.balanceOfAsync(account2).then(expected => {
-                assert.equal(expected.valueOf(), amount);
-            });
+            return bsTokenFrontend.balanceOfAsync(account2)
+                .should.eventually.satisfy(balance => balance.equals(new BigNumber(amount)));
         });
 
         it('check balance account3', () => {
-            return bsTokenFrontend.balanceOfAsync(account3).then(expected => {
-                assert.equal(expected.valueOf(), 0);
-            });
+            return bsTokenFrontend.balanceOfAsync(account3)
+                .should.eventually.satisfy(balance => balance.equals(new BigNumber(0)));
         });
 
         it('should fail if there is not allowance for the delegate', () => {
@@ -425,15 +410,13 @@ describe('BsTokenFrontend contract', function () {
         });
 
         it('check balance account2', () => {
-            return bsTokenFrontend.balanceOfAsync(account2).then(expected => {
-                assert.equal(expected.valueOf(), amount);
-            });
+            return bsTokenFrontend.balanceOfAsync(account2)
+                .should.eventually.satisfy(balance => balance.equals(new BigNumber(amount)));
         });
 
         it('check balance account3', () => {
-            return bsTokenFrontend.balanceOfAsync(account3).then(expected => {
-                assert.equal(expected.valueOf(), 0);
-            });
+            return bsTokenFrontend.balanceOfAsync(account3)
+                .should.eventually.satisfy(balance => balance.equals(new BigNumber(0)));
         });
     });
 
@@ -451,7 +434,7 @@ describe('BsTokenFrontend contract', function () {
                 gas: gas
             });
 
-            return promise.should.eventually.be.rejected
+            return promise.should.eventually.be.rejected;
         });
 
         it('unfreeze account', () => {
@@ -471,7 +454,7 @@ describe('BsTokenFrontend contract', function () {
                 gas: gas
             });
 
-            return promise.should.eventually.be.rejected
+            return promise.should.eventually.be.rejected;
         });
 
         it('startEmergency emergency', () => {
@@ -479,9 +462,8 @@ describe('BsTokenFrontend contract', function () {
         });
 
         it('check totalSupply', () => {
-            return bsTokenFrontend.totalSupplyAsync().then(expected => {
-                assert.equal(expected.valueOf(), amount);
-            });
+            return bsTokenFrontend.totalSupplyAsync()
+                .should.eventually.satisfy(balance => balance.equals(new BigNumber(amount)));
         });
 
         it('should be fulfilled', () => {
@@ -492,15 +474,13 @@ describe('BsTokenFrontend contract', function () {
         });
 
         it('check totalSupply', () => {
-            return bsTokenFrontend.totalSupplyAsync().then(expected => {
-                assert.equal(expected.valueOf(), amount - 50);
-            });
+            return bsTokenFrontend.totalSupplyAsync()
+                .should.eventually.satisfy(balance => balance.equals(new BigNumber(amount - 50)));
         });
 
         it('check balance', () => {
-            return bsTokenFrontend.balanceOfAsync(account2).then(expected => {
-                assert.equal(expected.valueOf(), amount - 50);
-            });
+            return bsTokenFrontend.balanceOfAsync(account2)
+                .should.eventually.satisfy(balance => balance.equals(new BigNumber(amount - 50)));
         });
 
         it('should be rejected if there is not enough funds', () => {
@@ -509,13 +489,12 @@ describe('BsTokenFrontend contract', function () {
                 gas: gas
             });
 
-            return promise.should.eventually.be.rejected
+            return promise.should.eventually.be.rejected;
         });
 
         it('check balance', () => {
-            return bsTokenFrontend.balanceOfAsync(account2).then(expected => {
-                assert.equal(expected.valueOf(), amount - 50);
-            });
+            return bsTokenFrontend.balanceOfAsync(account2)
+                .should.eventually.satisfy(balance => balance.equals(new BigNumber(amount - 50)));
         });
     });
 
@@ -533,7 +512,7 @@ describe('BsTokenFrontend contract', function () {
                 gas: gas
             });
 
-            return promise.should.eventually.be.rejected
+            return promise.should.eventually.be.rejected;
         });
 
         it('unfreeze account', () => {
@@ -553,7 +532,7 @@ describe('BsTokenFrontend contract', function () {
                 gas: gas
             });
 
-            return promise.should.eventually.be.rejected
+            return promise.should.eventually.be.rejected;
         });
 
         it('startEmergency emergency', () => {
@@ -572,15 +551,12 @@ describe('BsTokenFrontend contract', function () {
         });
 
         it('check allowance', () => {
-            return bsTokenFrontend.allowanceAsync(account2, delegate.address).then(expected => {
-                assert.equal(expected.valueOf(), amount);
-            });
+            return bsTokenFrontend.allowanceAsync(account2, delegate.address)
+                .should.eventually.satisfy(balance => balance.equals(new BigNumber(amount)));
         });
 
         it('check address delegate', () => {
-            return delegate.someAddressAsync().then(expected => {
-                assert.equal(expected.valueOf(), account2);
-            });
+            return delegate.someAddressAsync().should.eventually.equal(account2);
         });
 
     });
@@ -592,13 +568,11 @@ describe('BsTokenFrontend contract', function () {
                 gas: gas
             });
 
-            return promise.should.eventually.be.rejected
+            return promise.should.eventually.be.rejected;
         });
 
         it('check bsToken remains the same', () => {
-            return bsTokenFrontend.bsTokenAsync().then(expected => {
-                assert.equal(expected.valueOf(), bsToken.address);
-            });
+            return bsTokenFrontend.bsTokenAsync().should.eventually.equal(bsToken.address);
         });
 
         it('should be fulfilled', () => {
@@ -609,9 +583,7 @@ describe('BsTokenFrontend contract', function () {
         });
 
         it('check bsToken has been updated', () => {
-            return bsTokenFrontend.bsTokenAsync().then(expected => {
-                assert.equal(expected.valueOf(), accountDelegate);
-            });
+            return bsTokenFrontend.bsTokenAsync().should.eventually.equal(accountDelegate);
         });
     });
 
@@ -622,13 +594,11 @@ describe('BsTokenFrontend contract', function () {
                 gas: gas
             });
 
-            return promise.should.eventually.be.rejected
+            return promise.should.eventually.be.rejected;
         });
 
         it('check merchant remains the same', () => {
-            return bsTokenFrontend.merchantAsync().then(expected => {
-                assert.equal(expected.valueOf(), merchant);
-            });
+            return bsTokenFrontend.merchantAsync().should.eventually.equal(merchant);
         });
 
         it('should be fulfilled', () => {
@@ -639,9 +609,7 @@ describe('BsTokenFrontend contract', function () {
         });
 
         it('check merchant has been updated', () => {
-            return bsTokenFrontend.merchantAsync().then(expected => {
-                assert.equal(expected.valueOf(), account3);
-            });
+            return bsTokenFrontend.merchantAsync().should.eventually.equal(account3);
         });
     });
 
@@ -652,13 +620,11 @@ describe('BsTokenFrontend contract', function () {
                 gas: gas
             });
 
-            return promise.should.eventually.be.rejected
+            return promise.should.eventually.be.rejected;
         });
 
         it('check owner remains the same', () => {
-            return bsTokenFrontend.ownerAsync().then(expected => {
-                assert.equal(expected.valueOf(), admin);
-            });
+            return bsTokenFrontend.ownerAsync().should.eventually.equal(admin);
         });
 
         it('should be fulfilled', () => {
@@ -669,9 +635,7 @@ describe('BsTokenFrontend contract', function () {
         });
 
         it('check owner has been updated', () => {
-            return bsTokenFrontend.ownerAsync().then(expected => {
-                assert.equal(expected.valueOf(), account3);
-            });
+            return bsTokenFrontend.ownerAsync().should.eventually.equal(account3);
         });
     });
 
@@ -691,4 +655,5 @@ describe('BsTokenFrontend contract', function () {
                 return bsTokenData.setTotalSupplyAsync(Number(prevSupply.valueOf()) + amount, { from: admin, gas: gas});
             })
     }
+
 });
