@@ -62,9 +62,6 @@ describe('token', function () {
                             contractBSToken: {
                                 abi: contracts.BSTokenFrontend.abi,
                                 address: contracts.BSTokenFrontend.address
-                            },
-                            sendgrid: {
-                                apiKey: ''
                             }
                         });
 

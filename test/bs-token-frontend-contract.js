@@ -32,7 +32,6 @@ const provider = TestRPC.provider({
 });
 
 const web3 = new Web3(provider);
-const assert = chai.assert;
 chai.use(chaiAsPromised);
 chai.should();
 
