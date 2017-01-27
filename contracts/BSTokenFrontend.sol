@@ -82,7 +82,7 @@ contract BSTokenFrontend is Token, Ownable {
         bsToken.stopEmergency();
     }
 
-    function stopped() constant returns (bool) {
+    function emergency() constant returns (bool) {
         return bsToken.emergency();
     }
 

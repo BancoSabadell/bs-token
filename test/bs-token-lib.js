@@ -88,6 +88,28 @@ describe('token', function () {
             });
     });
 
+    describe('stoppable', () => {
+        it('check emergency state', () => {
+            return lib.isEmergency().should.eventually.include({emergency: false});
+        });
+
+        it('start emergency state', () => {
+            return lib.startEmergency();
+        });
+
+        it('check emergency state', () => {
+            return lib.isEmergency().should.eventually.include({emergency: true});
+        });
+
+        it('stop emergency state', () => {
+            return lib.stopEmergency();
+        });
+
+        it('check emergency state', () => {
+            return lib.isEmergency().should.eventually.include({emergency: false});
+        });
+    });
+
     describe('freeze and unfreeze account', () => {
         it('check state account', () => {
             return lib.frozenAccount(account2).should.eventually.include({frozen: false});

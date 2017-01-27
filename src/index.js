@@ -43,8 +43,8 @@ class BSToken {
         return this.web3.personal.unlockAccountAsync(account, password);
     }
 
-    stoppedCheck() {
-        return this.contract.stoppedAsync()
+    emergencyCheck() {
+        return this.contract.emergencyAsync()
             .then((stopped) => {
                 if (stopped) {
                     throw new Error('This contract has been cautiously stopped');
@@ -103,6 +103,11 @@ class BSToken {
             .then(merchant => ({ merchant }));
     }
 
+    isEmergency() {
+        return this.contract.emergencyAsync()
+            .then(emergency => ({ emergency }));
+    }
+
     enoughAllowanceFundsCheck(spender, target, required) {
         return this.contract.allowanceAsync(target, spender)
             .then((amount) => {
@@ -159,7 +164,7 @@ class BSToken {
     }
 
     transfer(from, passFrom, to, amount) {
-        return Promise.join(this.stoppedCheck(), this.frozenAccountCheck(from),
+        return Promise.join(this.emergencyCheck(), this.frozenAccountCheck(from),
             this.enoughFundsCheck(from, amount))
             .then(() => this.unlockAccount(from, passFrom))
             .then(() => this.contract.transferAsync(to, amount, {
@@ -170,7 +175,7 @@ class BSToken {
     }
 
     approve(from, passFrom, spender, amount) {
-        return Promise.join(this.stoppedCheck(), this.frozenAccountCheck(from),
+        return Promise.join(this.emergencyCheck(), this.frozenAccountCheck(from),
             this.enoughFundsCheck(from, amount))
             .then(() => this.unlockAccount(from, passFrom))
             .then(() => this.contract.approveAsync(spender, amount, {
@@ -181,7 +186,7 @@ class BSToken {
     }
 
     approveAndCall(from, passFrom, spender, to, id, amount) {
-        return Promise.join(this.stoppedCheck(), this.frozenAccountCheck(from),
+        return Promise.join(this.emergencyCheck(), this.frozenAccountCheck(from),
             this.enoughFundsCheck(from, amount))
             .then(() => this.unlockAccount(from, passFrom))
             .then(() => this.contract.approveAndCallAsync(spender, to, id, amount, {
@@ -192,7 +197,7 @@ class BSToken {
     }
 
     transferFrom(spender, passSpender, from, to, amount) {
-        return Promise.join(this.stoppedCheck(), this.frozenAccountCheck(from),
+        return Promise.join(this.emergencyCheck(), this.frozenAccountCheck(from),
             this.enoughAllowanceFundsCheck(spender, from, amount),
             this.enoughFundsCheck(from, amount))
             .then(() => this.unlockAccount(spender, passSpender))
@@ -204,7 +209,7 @@ class BSToken {
     }
 
     cashOut(target, pass, amount, bankAccount) {
-        return Promise.join(this.stoppedCheck(), this.frozenAccountCheck(target),
+        return Promise.join(this.emergencyCheck(), this.frozenAccountCheck(target),
             this.enoughFundsCheck(target, amount))
             .then(() => this.unlockAccount(target, pass))
             .then(() => this.contract.cashOutAsync(amount, bankAccount,
