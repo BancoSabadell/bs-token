@@ -39,7 +39,7 @@ chai.should();
 Promise.promisifyAll(web3.eth);
 Promise.promisifyAll(web3.personal);
 
-describe('Token contracts', function () {
+describe('BsTokenFrontend contract', function () {
     const amount = 100;
     const bankAccount = 'g4yr4ruenir4nueicj';
 
