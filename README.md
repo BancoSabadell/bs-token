@@ -18,7 +18,7 @@ Import BSToken module and create an instance passing by constructor a Web3 insta
 
 ```javascript
 const BSToken = require('bs-token');
-cont lib = new BSToken(web3, {
+const lib = new BSToken(web3, {
 	    admin: {
 	        account: admin,
 	        password: password
@@ -57,4 +57,4 @@ cont lib = new BSToken(web3, {
 
 **`startEmergency`** start an emergency state whichs preevents the whole system from performing any kind of interaction.
 
-**`stopEmergency`** stop the emergency state. 
+**`stopEmergency`** stop the emergency state.
