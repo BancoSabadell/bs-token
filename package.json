@@ -27,7 +27,7 @@
     "solc": "^0.4.6",
     "web3": "^0.16.0",
     "eslint": "^3.12.2",
-    "smart-contract-deployer": "git+https://a57c26aca1254beb929ba38251940f77a8ab4d2e:x-oauth-basic@github.com/BancoSabadell/smart-contract-deployer.git",
+    "smart-contract-deployer": "^1.0.1",
     "sendgrid": "^4.7.1"
   },
   "devDependencies": {
