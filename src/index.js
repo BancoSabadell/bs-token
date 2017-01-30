@@ -1,5 +1,6 @@
 'use strict';
 
+const Deployer = require('smart-contract-deployer');
 const fs = require('fs');
 const path = require('path');
 const Promise = require('bluebird');
@@ -216,4 +217,36 @@ module.exports.contracts = {
     'BSToken.sol': fs.readFileSync(path.join(__dirname, '../contracts/BSToken.sol'), 'utf8'),
     'BSTokenFrontend.sol': fs.readFileSync(path.join(__dirname, '../contracts/BSTokenFrontend.sol'), 'utf8'),
     'Token.sol': fs.readFileSync(path.join(__dirname, '../contracts/Token.sol'), 'utf8')
+};
+
+module.exports.deploy = function (web3, admin, merchant, gas) {
+    const deployment = {};
+    const deployer = new Deployer({ web3: web3, address: admin, gas: 4500000 });
+
+    return deployer.deployContracts(BSToken.contracts, {}, ['BSTokenData'])
+        .then((contracts) => {
+            deployment.bsTokenData = web3.eth.contract(contracts.BSTokenData.abi).at(contracts.BSTokenData.address);
+            Promise.promisifyAll(deployment.bsTokenData);
+
+            return deployer.deployContracts(BSToken.contracts, {'BSToken': [deployment.bsTokenData.address]}, ['BSToken']);
+        })
+        .then((contracts) => {
+            deployment.bsToken = web3.eth.contract(contracts.BSToken.abi).at(contracts.BSToken.address);
+            Promise.promisifyAll(deployment.bsToken);
+            return deployment.bsTokenData.addMerchantAsync(deployment.bsToken.address, { from: admin, gas: gas });
+        })
+        .then(() => {
+            return deployer.deployContracts(BSToken.contracts, {'BSTokenFrontend': [deployment.bsToken.address]}, ['BSTokenFrontend'])
+                .then((contracts) => {
+                    deployment.bsTokenFrontend = web3.eth.contract(contracts.BSTokenFrontend.abi).at(contracts.BSTokenFrontend.address);
+                    Promise.promisifyAll(deployment.bsTokenFrontend);
+
+                    return Promise.all(
+                        deployment.bsTokenFrontend.setMerchantAsync(merchant, { from: admin, gas: gas }),
+                        deployment.bsTokenFrontend.setBSTokenAsync(deployment.bsToken.address, { from: admin, gas: gas }),
+                        deployment.bsToken.transferOwnershipAsync(deployment.bsTokenFrontend.address, { from: admin, gas: gas })
+                    );
+                })
+                .then(() => deployment);
+        });
 };
