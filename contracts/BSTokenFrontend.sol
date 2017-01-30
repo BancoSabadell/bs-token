@@ -1,6 +1,8 @@
 import "BSToken.sol";
 import "Ownable.sol";
 import "Token.sol";
+import "BSTokenData.sol";
+import "TokenRecipient.sol";
 
 pragma solidity ^0.4.2;
 
@@ -53,8 +55,12 @@ contract BSTokenFrontend is Token, Ownable {
         return bsToken.approve(msg.sender, spender, value);
     }
 
+    /* Approve and then communicate the approved contract in a single tx */
     function approveAndCall(address spender, address to, string id, uint256 value)  {
-        bsToken.approveAndCall(msg.sender, spender, to, id, value);
+        if (approve(spender, value)) {
+            TokenRecipient delegate = TokenRecipient(spender);
+            delegate.receiveApproval(msg.sender, to, id, value);
+        }
     }
 
     function freezeAccount(address target, bool freeze) onlyAdminOrMerchant {
