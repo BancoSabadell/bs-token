@@ -36,52 +36,30 @@ describe('token', function () {
     before(function() {
         this.timeout(60000);
 
-        const deployer = new Deployer({ web3: web3, address: admin, gas: gas });
-        BSToken.contracts['BSTokenDelegate.sol'] = fs.readFileSync('./test/BSTokenDelegate.sol', 'utf8');
+        return BSToken.deploy(web3, admin, merchant, gas)
+            .then(deployment => {
+                bsTokenFrontend = deployment.bsTokenFrontend;
+                bsTokenData = deployment.bsTokenData;
 
-        return deployer.deployContracts(BSToken.contracts, {}, ['BSTokenData'])
-            .then((contracts) => {
-                bsTokenData = web3.eth.contract(contracts.BSTokenData.abi).at(contracts.BSTokenData.address);
-                Promise.promisifyAll(bsTokenData);
+                lib = new BSToken(web3, {
+                    admin: {
+                        account: admin,
+                        password: ''
+                    },
+                    contractBSToken: {
+                        abi: bsTokenFrontend.abi,
+                        address: bsTokenFrontend.address
+                    }
+                });
 
-                return deployer.deployContracts(BSToken.contracts, {'BSToken': [bsTokenData.address]}, ['BSToken']);
-            })
-            .then((contracts) => {
-                bsToken = web3.eth.contract(contracts.BSToken.abi).at(contracts.BSToken.address);
-                Promise.promisifyAll(bsToken);
-                return bsTokenData.addMerchantAsync(bsToken.address, { from: admin, gas: gas });
-            })
-            .then(() => {
-                return deployer.deployContracts(BSToken.contracts, {'BSTokenFrontend': [bsToken.address]}, ['BSTokenFrontend'])
-                    .then((contracts) => {
-                        lib = new BSToken(web3, {
-                            admin: {
-                                account: admin,
-                                password: ''
-                            },
-                            contractBSToken: {
-                                abi: contracts.BSTokenFrontend.abi,
-                                address: contracts.BSTokenFrontend.address
-                            }
-                        });
+                const deployer = new Deployer({ web3: web3, address: admin, gas: 4500000 });
+                BSToken.contracts['BSTokenDelegate.sol'] = fs.readFileSync('./test/BSTokenDelegate.sol', 'utf8');
 
-                        bsTokenFrontend = web3.eth.contract(contracts.BSTokenFrontend.abi).at(contracts.BSTokenFrontend.address);
-                        Promise.promisifyAll(bsTokenFrontend);
-
-                        return Promise.all(
-                            bsTokenFrontend.setMerchantAsync(merchant, { from: admin, gas: gas }),
-                            bsTokenFrontend.setBSTokenAsync(bsToken.address, { from: admin, gas: gas }),
-                            bsToken.transferOwnershipAsync(bsTokenFrontend.address, { from: admin, gas: gas })
-                        );
-                    });
-            })
-            .then(() => {
                 const paramsConstructor = {'BSTokenDelegate': [bsTokenFrontend.address]};
                 return deployer.deployContracts(BSToken.contracts, paramsConstructor, ['BSTokenDelegate']);
-            })
-            .then((contracts) => {
+            }).then((contracts) => {
                 delegate = web3.eth.contract(contracts.BSTokenDelegate.abi).at(contracts.BSTokenDelegate.address);
-                Promise.promisifyAll(delegate);
+                return Promise.promisifyAll(delegate);
             });
     });
 

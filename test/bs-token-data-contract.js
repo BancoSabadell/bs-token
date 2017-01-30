@@ -50,13 +50,8 @@ describe('BsTokenData contract', function () {
     before(function() {
         this.timeout(60000);
 
-        const deployer = new Deployer({ web3: web3, address: admin, gas: 4500000 });
-
-        return deployer.deployContracts(BSToken.contracts, {}, ['BSTokenData'])
-            .then((contracts) => {
-                bsTokenData = web3.eth.contract(contracts.BSTokenData.abi).at(contracts.BSTokenData.address);
-                Promise.promisifyAll(bsTokenData);
-            });
+        return BSToken.deploy(web3, admin, merchant, gas)
+            .then(deployment => bsTokenData = deployment.bsTokenData);
     });
 
     describe('stoppable as admin', () => {
