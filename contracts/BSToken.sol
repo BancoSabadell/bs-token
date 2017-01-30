@@ -1,5 +1,4 @@
 import "Ownable.sol";
-import "TokenRecipient.sol";
 import "BSTokenData.sol";
 import "Stoppable.sol";
 
@@ -87,14 +86,6 @@ contract BSToken is Stoppable {
         returns (bool success) {
             tokenData.setAllowance(sender, spender, value);
             return true;
-    }
-
-    /* Approve and then communicate the approved contract in a single tx */
-    function approveAndCall(address sender, address spender, address to, string id, uint256 value)
-        onlyFrontend stopInEmergency accountIsNotFrozen(sender) {
-            TokenRecipient delegate = TokenRecipient(spender);
-            approve(sender, spender, value);
-            delegate.receiveApproval(sender, to, id, value);
     }
 
     function freezeAccount(address target, bool freeze)
