@@ -1,46 +1,23 @@
 pragma solidity ^0.4.2;
 
 contract Ownable {
-  bool public stopped;
-  address internal owner;
 
-  event SetOwner(address indexed previousOwner, address indexed newOwner);
+    address public owner;
 
-  function Ownable () {
-    owner = msg.sender;
-  }
+    event SetOwner(address indexed previousOwner, address indexed newOwner);
 
-  modifier onlyOwner {
-    if (msg.sender != owner) throw;
-    _;
-  }
+    function Ownable () {
+        owner = msg.sender;
+    }
 
-  modifier stopInEmergency {
-    if (stopped) throw;
-    _;
-  }
+    modifier onlyOwner {
+        if (msg.sender != owner) throw;
+        _;
+    }
 
-  modifier onlyInEmergency {
-    if (!stopped) throw;
-    _;
-  }
+    function transferOwnership(address newOwner) onlyOwner {
+        SetOwner(owner, newOwner);
+        owner = newOwner;
+    }
 
-  function transferOwnership(address newOwner) onlyOwner {
-    SetOwner(owner, newOwner);
-    owner = newOwner;
-  }
-
-  // called by the owner on emergency, triggers stopped state
-  function emergencyStop() external onlyOwner {
-    stopped = true;
-  }
-
-  // called by the owner on end of emergency, returns to normal state
-  function release() external onlyOwner onlyInEmergency {
-    stopped = false;
-  }
-
-  function getOwner() constant returns (address out) {
-    return owner;
-  }
 }
