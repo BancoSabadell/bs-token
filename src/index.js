@@ -1,9 +1,9 @@
 'use strict';
 
+const Deployer = require('smart-contract-deployer');
 const fs = require('fs');
 const path = require('path');
 const Promise = require('bluebird');
-const sendgrid = require('sendgrid');
 
 class BSToken {
     constructor(web3, config) {
@@ -12,24 +12,9 @@ class BSToken {
         this.contract = this.web3.eth.contract(config.contractBSToken.abi)
             .at(config.contractBSToken.address);
 
-        // watch for CashOut events
-        this.contract.CashOut((error, result) => {
-            if (!error) {
-                this.sendCashOutEmail(
-                    result.args.buyer,
-                    result.args.amount,
-                    result.args.bankAccount
-                );
-            }
-        });
-
         Promise.promisifyAll(this.web3.personal);
         Promise.promisifyAll(this.web3.eth);
         Promise.promisifyAll(this.contract);
-    }
-
-    isEthereumAddress(candidate) {
-        return this.web3.isAddress(candidate);
     }
 
     unlockAdminAccount() {
@@ -43,8 +28,8 @@ class BSToken {
         return this.web3.personal.unlockAccountAsync(account, password);
     }
 
-    stoppedCheck() {
-        return this.contract.stoppedAsync()
+    emergencyCheck() {
+        return this.contract.emergencyAsync()
             .then((stopped) => {
                 if (stopped) {
                     throw new Error('This contract has been cautiously stopped');
@@ -71,8 +56,41 @@ class BSToken {
     }
 
     getOwner() {
-        return this.contract.getOwnerAsync()
+        return this.contract.ownerAsync()
             .then(owner => ({ owner }));
+    }
+
+    setBsToken(bsToken) {
+        return this.unlockAdminAccount()
+            .then(() => this.contract.setBSTokenAsync(bsToken, {
+                from: this.config.admin.account,
+                gas: 3000000
+            }))
+            .then(tx => ({ tx }));
+    }
+
+    getBsToken() {
+        return this.contract.bsTokenAsync()
+            .then(bsToken => ({ bsToken }));
+    }
+
+    setMerchant(merchant) {
+        return this.unlockAdminAccount()
+            .then(() => this.contract.setMerchantAsync(merchant, {
+                from: this.config.admin.account,
+                gas: 3000000
+            }))
+            .then(tx => ({ tx }));
+    }
+
+    getMerchant() {
+        return this.contract.merchantAsync()
+            .then(merchant => ({ merchant }));
+    }
+
+    isEmergency() {
+        return this.contract.emergencyAsync()
+            .then(emergency => ({ emergency }));
     }
 
     enoughAllowanceFundsCheck(spender, target, required) {
@@ -103,18 +121,18 @@ class BSToken {
             .then(value => ({ amount: value.toNumber() }));
     }
 
-    stop() {
+    startEmergency() {
         return this.unlockAdminAccount()
-            .then(() => this.contract.emergencyStopAsync({
+            .then(() => this.contract.startEmergencyAsync({
                 from: this.config.admin.account,
                 gas: 3000000
             }))
             .then(tx => ({ tx }));
     }
 
-    release() {
+    stopEmergency() {
         return this.unlockAdminAccount()
-            .then(() => this.contract.releaseAsync({
+            .then(() => this.contract.stopEmergencyAsync({
                 from: this.config.admin.account,
                 gas: 3000000
             }))
@@ -131,7 +149,7 @@ class BSToken {
     }
 
     transfer(from, passFrom, to, amount) {
-        return Promise.join(this.stoppedCheck(), this.frozenAccountCheck(from),
+        return Promise.join(this.emergencyCheck(), this.frozenAccountCheck(from),
             this.enoughFundsCheck(from, amount))
             .then(() => this.unlockAccount(from, passFrom))
             .then(() => this.contract.transferAsync(to, amount, {
@@ -142,7 +160,7 @@ class BSToken {
     }
 
     approve(from, passFrom, spender, amount) {
-        return Promise.join(this.stoppedCheck(), this.frozenAccountCheck(from),
+        return Promise.join(this.emergencyCheck(), this.frozenAccountCheck(from),
             this.enoughFundsCheck(from, amount))
             .then(() => this.unlockAccount(from, passFrom))
             .then(() => this.contract.approveAsync(spender, amount, {
@@ -153,7 +171,7 @@ class BSToken {
     }
 
     approveAndCall(from, passFrom, spender, to, id, amount) {
-        return Promise.join(this.stoppedCheck(), this.frozenAccountCheck(from),
+        return Promise.join(this.emergencyCheck(), this.frozenAccountCheck(from),
             this.enoughFundsCheck(from, amount))
             .then(() => this.unlockAccount(from, passFrom))
             .then(() => this.contract.approveAndCallAsync(spender, to, id, amount, {
@@ -164,7 +182,7 @@ class BSToken {
     }
 
     transferFrom(spender, passSpender, from, to, amount) {
-        return Promise.join(this.stoppedCheck(), this.frozenAccountCheck(from),
+        return Promise.join(this.emergencyCheck(), this.frozenAccountCheck(from),
             this.enoughAllowanceFundsCheck(spender, from, amount),
             this.enoughFundsCheck(from, amount))
             .then(() => this.unlockAccount(spender, passSpender))
@@ -175,16 +193,8 @@ class BSToken {
             .then(tx => ({ tx }));
     }
 
-    cashIn(target, amount) {
-        return Promise.join(this.stoppedCheck(), this.frozenAccountCheck(target))
-            .then(() => this.unlockAdminAccount())
-            .then(() => this.contract.cashInAsync(target, amount,
-                { from: this.config.admin.account, gas: 3000000 }))
-            .then(tx => ({ tx }));
-    }
-
     cashOut(target, pass, amount, bankAccount) {
-        return Promise.join(this.stoppedCheck(), this.frozenAccountCheck(target),
+        return Promise.join(this.emergencyCheck(), this.frozenAccountCheck(target),
             this.enoughFundsCheck(target, amount))
             .then(() => this.unlockAccount(target, pass))
             .then(() => this.contract.cashOutAsync(amount, bankAccount,
@@ -196,25 +206,47 @@ class BSToken {
         return this.contract.balanceOfAsync(target)
             .then(balance => ({ amount: balance.toNumber() }));
     }
-
-    sendCashOutEmail(target, cashOutAmount, bankAccount) {
-        const helper = sendgrid.mail;
-        const fromEmail = new helper.Email('escrow.app@bancsabadell.com');
-        const toEmail = new helper.Email('cayellasisaac@bancsabadell.com');
-        const subject = `Cash out request from ${target}`;
-        const content = new helper.Content('text/plain', `Amount: ${cashOutAmount} Bank Account: ${bankAccount} Address: ${target}`);
-        const mail = new helper.Mail(fromEmail, subject, toEmail, content);
-
-        const sg = sendgrid(this.config.sendgrid.apiKey);
-        const request = sg.emptyRequest({ method: 'POST', path: '/v3/mail/send', body: mail.toJSON() });
-        sg.API(request);
-    }
 }
 
 module.exports = BSToken;
 module.exports.contracts = {
     'TokenRecipient.sol': fs.readFileSync(path.join(__dirname, '../contracts/TokenRecipient.sol'), 'utf8'),
     'Ownable.sol': fs.readFileSync(path.join(__dirname, '../contracts/Ownable.sol'), 'utf8'),
+    'Stoppable.sol': fs.readFileSync(path.join(__dirname, '../contracts/Stoppable.sol'), 'utf8'),
     'BSTokenData.sol': fs.readFileSync(path.join(__dirname, '../contracts/BSTokenData.sol'), 'utf8'),
-    'BSToken.sol': fs.readFileSync(path.join(__dirname, '../contracts/BSToken.sol'), 'utf8')
+    'BSToken.sol': fs.readFileSync(path.join(__dirname, '../contracts/BSToken.sol'), 'utf8'),
+    'BSTokenFrontend.sol': fs.readFileSync(path.join(__dirname, '../contracts/BSTokenFrontend.sol'), 'utf8'),
+    'Token.sol': fs.readFileSync(path.join(__dirname, '../contracts/Token.sol'), 'utf8')
+};
+
+module.exports.deploy = function (web3, admin, merchant, gas) {
+    const deployment = {};
+    const deployer = new Deployer({ web3: web3, address: admin, gas: 4500000 });
+
+    return deployer.deployContracts(BSToken.contracts, {}, ['BSTokenData'])
+        .then((contracts) => {
+            deployment.bsTokenData = web3.eth.contract(contracts.BSTokenData.abi).at(contracts.BSTokenData.address);
+            Promise.promisifyAll(deployment.bsTokenData);
+
+            return deployer.deployContracts(BSToken.contracts, {'BSToken': [deployment.bsTokenData.address]}, ['BSToken']);
+        })
+        .then((contracts) => {
+            deployment.bsToken = web3.eth.contract(contracts.BSToken.abi).at(contracts.BSToken.address);
+            Promise.promisifyAll(deployment.bsToken);
+            return deployment.bsTokenData.addMerchantAsync(deployment.bsToken.address, { from: admin, gas: gas });
+        })
+        .then(() => {
+            return deployer.deployContracts(BSToken.contracts, {'BSTokenFrontend': [deployment.bsToken.address]}, ['BSTokenFrontend'])
+                .then((contracts) => {
+                    deployment.bsTokenFrontend = web3.eth.contract(contracts.BSTokenFrontend.abi).at(contracts.BSTokenFrontend.address);
+                    Promise.promisifyAll(deployment.bsTokenFrontend);
+
+                    return Promise.all(
+                        deployment.bsTokenFrontend.setMerchantAsync(merchant, { from: admin, gas: gas }),
+                        deployment.bsTokenFrontend.setBSTokenAsync(deployment.bsToken.address, { from: admin, gas: gas }),
+                        deployment.bsToken.transferOwnershipAsync(deployment.bsTokenFrontend.address, { from: admin, gas: gas })
+                    );
+                })
+                .then(() => deployment);
+        });
 };

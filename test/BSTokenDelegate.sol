@@ -1,14 +1,14 @@
-import "BSToken.sol";
+import "BSTokenFrontend.sol";
 import "TokenRecipient.sol";
 
 pragma solidity ^0.4.2;
 
 contract BSTokenDelegate is TokenRecipient {
-    BSToken token;
+    BSTokenFrontend token;
     address public someAddress;
 
     function BSTokenDelegate(address bsTokenAddress){
-        token = BSToken(bsTokenAddress);
+        token = BSTokenFrontend(bsTokenAddress);
     }
 
     function receiveApproval(address from, address to, string id, uint256 value) {
