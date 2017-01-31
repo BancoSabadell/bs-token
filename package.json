@@ -33,6 +33,7 @@
     "web3": "^0.16.0",
     "eslint": "^3.12.2",
     "smart-contract-deployer": "^1.0.1",
+    "bs-token-banking": "^1.0.2",
     "sendgrid": "^4.7.1"
   },
   "devDependencies": {

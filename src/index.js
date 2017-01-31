@@ -4,6 +4,7 @@ const Deployer = require('smart-contract-deployer');
 const fs = require('fs');
 const path = require('path');
 const Promise = require('bluebird');
+const BSBanking = require('bs-token-banking');
 
 class BSToken {
     constructor(web3, config) {
@@ -222,13 +223,20 @@ module.exports.contracts = {
 module.exports.deploy = function (web3, admin, merchant, gas) {
     const deployment = {};
     const deployer = new Deployer({ web3: web3, address: admin, gas: 4500000 });
+    const contracts = Object.assign(BSToken.contracts, BSBanking.contracts);
 
-    return deployer.deployContracts(BSToken.contracts, {}, ['BSTokenData'])
+    return deployer.deployContracts(contracts, {}, ['BSTokenData'])
         .then((contracts) => {
             deployment.bsTokenData = web3.eth.contract(contracts.BSTokenData.abi).at(contracts.BSTokenData.address);
             Promise.promisifyAll(deployment.bsTokenData);
 
-            return deployer.deployContracts(BSToken.contracts, {'BSToken': [deployment.bsTokenData.address]}, ['BSToken']);
+            return deployer.deployContracts(contracts, {'BSBanking': [deployment.bsTokenData.address]}, ['BSBanking']);
+        })
+        .then((contracts) => {
+            deployment.bsBanking = web3.eth.contract(contracts.BSBanking.abi).at(contracts.BSBanking.address);
+            Promise.promisifyAll(deployment.bsBanking);
+
+            return deployer.deployContracts(contracts, {'BSToken': [deployment.bsTokenData.address, deployment.bsBanking.address]}, ['BSToken']);
         })
         .then((contracts) => {
             deployment.bsToken = web3.eth.contract(contracts.BSToken.abi).at(contracts.BSToken.address);
@@ -236,12 +244,13 @@ module.exports.deploy = function (web3, admin, merchant, gas) {
             return deployment.bsTokenData.addMerchantAsync(deployment.bsToken.address, { from: admin, gas: gas });
         })
         .then(() => {
-            return deployer.deployContracts(BSToken.contracts, {'BSTokenFrontend': [deployment.bsToken.address]}, ['BSTokenFrontend'])
+            return deployer.deployContracts(contracts, {'BSTokenFrontend': [deployment.bsToken.address]}, ['BSTokenFrontend'])
                 .then((contracts) => {
                     deployment.bsTokenFrontend = web3.eth.contract(contracts.BSTokenFrontend.abi).at(contracts.BSTokenFrontend.address);
                     Promise.promisifyAll(deployment.bsTokenFrontend);
 
                     return Promise.all(
+                        deployment.bsTokenData.addMerchantAsync(deployment.bsBanking.address, { from: admin, gas: gas }),
                         deployment.bsTokenFrontend.setMerchantAsync(merchant, { from: admin, gas: gas }),
                         deployment.bsTokenFrontend.setBSTokenAsync(deployment.bsToken.address, { from: admin, gas: gas }),
                         deployment.bsToken.transferOwnershipAsync(deployment.bsTokenFrontend.address, { from: admin, gas: gas })

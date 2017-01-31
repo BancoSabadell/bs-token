@@ -43,6 +43,7 @@ describe('BsTokenFrontend contract', function () {
     const bankAccount = 'g4yr4ruenir4nueicj';
 
     let bsTokenData = null;
+    let bsBanking = null;
     let bsToken = null;
     let bsTokenFrontend = null;
     let delegate = null;
@@ -59,6 +60,7 @@ describe('BsTokenFrontend contract', function () {
         return BSToken.deploy(web3, admin, merchant, gas)
             .then(deployment => {
                 bsTokenData = deployment.bsTokenData;
+                bsBanking = deployment.bsBanking;
                 bsToken = deployment.bsToken;
                 bsTokenFrontend = deployment.bsTokenFrontend;
 
@@ -179,7 +181,7 @@ describe('BsTokenFrontend contract', function () {
 
     describe('transfer', () => {
         it('cashIn amount to account2', () => {
-            return cashIn(account2, amount);
+            return bsBanking.cashInAsync(account2, amount, { from: admin, gas: gas});
         });
 
         it('freeze account', () => {
@@ -514,11 +516,11 @@ describe('BsTokenFrontend contract', function () {
         });
 
         it('stop emergency', () => {
-            return bsTokenFrontend.stopEmergencyAsync({ from: admin, gas: gas})
+            return bsTokenFrontend.stopEmergencyAsync({ from: admin, gas: gas});
         });
 
         it('add cash to account2', () => {
-            return cashIn(account2, amount)
+            return bsBanking.cashInAsync(account2, amount, { from: admin, gas: gas});
         });
 
         it('should be fulfilled', () => {
@@ -616,22 +618,4 @@ describe('BsTokenFrontend contract', function () {
             return bsTokenFrontend.ownerAsync().should.eventually.equal(account3);
         });
     });
-
-    function cashIn(target, amount) {
-        let prevBalance;
-        return bsTokenFrontend.balanceOfAsync(target)
-            .then(balance => {
-                prevBalance = Number(balance.valueOf());
-                return bsTokenData.setBalanceAsync(target, prevBalance + amount, { from: admin, gas: gas});
-            })
-            .then(() => bsTokenFrontend.balanceOfAsync(target))
-            .then((updatedBalanced) => {
-                if (Number(updatedBalanced.valueOf()) != prevBalance + amount) throw Error('After cashIn balance does not match');
-            })
-            .then(() => bsTokenData.getTotalSupplyAsync({ from: admin }))
-            .then((prevSupply) => {
-                return bsTokenData.setTotalSupplyAsync(Number(prevSupply.valueOf()) + amount, { from: admin, gas: gas});
-            })
-    }
-
 });

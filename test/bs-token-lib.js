@@ -23,6 +23,7 @@ describe('token', function () {
 
     const gas = 3000000;
     let bsTokenData = null;
+    let bsBanking = null;
     let bsTokenFrontend = null;
     let lib = null;
     let bsToken = null;
@@ -40,6 +41,7 @@ describe('token', function () {
             .then(deployment => {
                 bsTokenFrontend = deployment.bsTokenFrontend;
                 bsTokenData = deployment.bsTokenData;
+                bsBanking = deployment.bsBanking;
 
                 lib = new BSToken(web3, {
                     admin: {
@@ -109,7 +111,7 @@ describe('token', function () {
 
     describe('transfer', () => {
         it('cashIn amount to account2', () => {
-            return cashIn(account2, amount);
+            return bsBanking.cashInAsync(account2, amount, { from: admin, gas: gas});
         });
 
         it('freeze account', () => {
@@ -282,7 +284,7 @@ describe('token', function () {
         });
 
         it('add cash to account2', () => {
-            return cashIn(account2, amount);
+            return bsBanking.cashInAsync(account2, amount, { from: admin, gas: gas});
         });
 
         it('should be fulfilled', () => {
@@ -333,21 +335,4 @@ describe('token', function () {
             return lib.getOwner().should.eventually.include({owner: account3});
         });
     });
-
-    function cashIn(target, amount) {
-        let prevBalance;
-        return bsTokenFrontend.balanceOfAsync(target)
-            .then(balance => {
-                prevBalance = Number(balance.valueOf());
-                return bsTokenData.setBalanceAsync(target, prevBalance + amount, { from: admin, gas: gas});
-            })
-            .then(() => bsTokenFrontend.balanceOfAsync(target))
-            .then((updatedBalanced) => {
-                if (Number(updatedBalanced.valueOf()) != prevBalance + amount) throw Error('After cashIn balance does not match');
-            })
-            .then(() => bsTokenData.getTotalSupplyAsync({ from: admin }))
-            .then((prevSupply) => {
-                return bsTokenData.setTotalSupplyAsync(Number(prevSupply.valueOf()) + amount, { from: admin, gas: gas});
-            })
-    }
 });
