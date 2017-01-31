@@ -1,4 +1,4 @@
-# bs-token
+# bs-token 
 
 ### A js wrapper around BSToken contract to simplify its consumption.
 
