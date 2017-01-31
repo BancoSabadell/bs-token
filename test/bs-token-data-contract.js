@@ -1,6 +1,5 @@
 'use strict';
 
-const Deployer = require('smart-contract-deployer');
 const TestRPC = require('ethereumjs-testrpc');
 const Web3 = require('web3');
 const Promise = require('bluebird');
