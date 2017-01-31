@@ -1,6 +1,6 @@
 {
   "name": "bs-token",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A js wrapper around BSToken contract to simplify its consumption",
   "main": "src/index.js",
   "scripts": {
