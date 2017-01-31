@@ -1,15 +1,18 @@
 import "Ownable.sol";
 import "BSTokenData.sol";
 import "Stoppable.sol";
+import "BSBanking.sol";
 
 pragma solidity ^0.4.2;
 
 contract BSToken is Stoppable {
     BSTokenData public tokenData;
+    BSBanking public bsBanking;
 
     /* Initializes contract with initial supply tokens to the creator of the contract */
-    function BSToken(address bsTokenDataAddress) {
+    function BSToken(address bsTokenDataAddress, address bsBankingAddress) {
         tokenData = BSTokenData(bsTokenDataAddress);
+        bsBanking = BSBanking(bsBankingAddress);
     }
 
     /* Get the account balance */
@@ -94,19 +97,12 @@ contract BSToken is Stoppable {
     }
 
     function cashOut(address sender, uint256 amount, string bankAccount)
-        onlyFrontend stopInEmergency accountIsNotFrozen(sender) enoughFunds(sender, amount) {
-            tokenData.setBalance(sender, tokenData.getBalance(sender) - amount);
-            tokenData.setTotalSupply(tokenData.getTotalSupply() - amount);
+        onlyFrontend stopInEmergency accountIsNotFrozen(sender) {
+            bsBanking.cashOut(sender, amount, bankAccount);
     }
 
     modifier accountIsNotFrozen(address target) {
         if (frozenAccount(target))
-            throw;
-        _;
-    }
-
-    modifier enoughFunds(address target, uint256 amount) {
-        if (tokenData.getBalance(target) < amount)
             throw;
         _;
     }
