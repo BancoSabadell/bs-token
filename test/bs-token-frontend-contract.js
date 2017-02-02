@@ -1,12 +1,14 @@
 'use strict';
 
-const Deployer = require('smart-contract-deployer');
+const Deployer = require('contract-deployer');
 const fs = require('fs');
 const TestRPC = require('ethereumjs-testrpc');
 const Web3 = require('web3');
 const Promise = require('bluebird');
 const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
+const BSTokenData = require('bs-token-data');
+const BSTokenBanking = require('bs-token-banking');
 const BSToken = require('../src/index');
 const BigNumber = require('bignumber.js');
 const gas = 3000000;
@@ -40,11 +42,9 @@ Promise.promisifyAll(web3.personal);
 
 describe('BsTokenFrontend contract', function () {
     const amount = 100;
-    const bankAccount = 'g4yr4ruenir4nueicj';
 
     let bsTokenData = null;
-    let bsBanking = null;
-    let bsToken = null;
+    let bsTokenBanking = null;
     let bsTokenFrontend = null;
     let delegate = null;
 
@@ -57,21 +57,24 @@ describe('BsTokenFrontend contract', function () {
     before(function() {
         this.timeout(60000);
 
-        return BSToken.deploy(web3, admin, merchant, gas)
-            .then(deployment => {
-                bsTokenData = deployment.bsTokenData;
-                bsBanking = deployment.bsBanking;
-                bsToken = deployment.bsToken;
-                bsTokenFrontend = deployment.bsTokenFrontend;
+        return BSTokenData.deployedContract(web3, admin, gas)
+            .then((contract) => {
+                bsTokenData = contract;
+                return BSToken.deployedContract(web3, admin, merchant, bsTokenData, gas);
+            })
+            .then((contract) => {
+                bsTokenFrontend = contract;
 
-                const deployer = new Deployer({ web3: web3, address: admin, gas: 4500000 });
-                BSToken.contracts['BSTokenDelegate.sol'] = fs.readFileSync('./test/BSTokenDelegate.sol', 'utf8');
+                BSTokenData.contracts['BSTokenDelegate.sol'] = fs.readFileSync('./test/BSTokenDelegate.sol', 'utf8');
+                const deployer = new Deployer(web3, {sources: BSTokenData.contracts}, 0);
 
-                const paramsConstructor = {'BSTokenDelegate': [bsTokenFrontend.address]};
-                return deployer.deployContracts(BSToken.contracts, paramsConstructor, ['BSTokenDelegate']);
-            }).then((contracts) => {
-                delegate = web3.eth.contract(contracts.BSTokenDelegate.abi).at(contracts.BSTokenDelegate.address);
-                return Promise.promisifyAll(delegate);
+                return deployer.deploy('BSTokenDelegate', [bsTokenFrontend.address], { from: admin, gas: gas });
+            }).then((contract) => {
+                delegate = contract;
+                return BSTokenBanking.deployedContract(web3, admin, bsTokenData, gas)
+            })
+            .then((contract) => {
+                bsTokenBanking = contract;
             });
     });
 
@@ -80,16 +83,10 @@ describe('BsTokenFrontend contract', function () {
             return bsTokenData.ownerAsync().should.eventually.equal(admin);
         });
 
-        it('check bsTokenData has added bsToken.address as a merchant', () => {
-            return bsTokenData.merchantsAsync(bsToken.address).should.eventually.be.true;
-        });
-
-        it('check BSToken has bsTokenData address as data source', () => {
-            return bsToken.tokenDataAsync().should.eventually.equal(bsTokenData.address);
-        });
-
-        it('check BSToken owner is BSTokenFrontEnd', () => {
-            return bsToken.ownerAsync().should.eventually.equal(bsTokenFrontend.address);
+        it('check bsTokenData has BSToken as a merchant account', () => {
+            return bsTokenFrontend.bsTokenAsync()
+                .then(bsToken => bsTokenData.merchantsAsync(bsToken))
+                .should.eventually.equal(true);
         });
 
         it('check BSTokenFrontEnd owner is admin account', () => {
@@ -101,7 +98,8 @@ describe('BsTokenFrontend contract', function () {
         });
 
         it('check BSTokenFrontEnd has BSToken as implementation', () => {
-            return bsTokenFrontend.bsTokenAsync().should.eventually.equal(bsToken.address);
+            return bsTokenFrontend.bsTokenAsync()
+                .then(bsToken => bsTokenFrontend.bsTokenAsync().should.eventually.equal(bsToken));
         });
     });
 
@@ -181,7 +179,7 @@ describe('BsTokenFrontend contract', function () {
 
     describe('transfer', () => {
         it('cashIn amount to account2', () => {
-            return bsBanking.cashInAsync(account2, amount, { from: admin, gas: gas});
+            return bsTokenBanking.cashInAsync(account2, amount, { from: admin, gas: gas});
         });
 
         it('freeze account', () => {
@@ -400,84 +398,6 @@ describe('BsTokenFrontend contract', function () {
         });
     });
 
-    describe('cashOut', () => {
-        it('freeze account', () => {
-            return bsTokenFrontend.freezeAccountAsync(account2, true, {
-                from: admin,
-                gas: gas
-            });
-        });
-
-        it('should be rejected if the account is frozen', () => {
-            const promise = bsTokenFrontend.cashOutAsync(amount - 50, bankAccount, {
-                from: account2,
-                gas: gas
-            });
-
-            return promise.should.eventually.be.rejected;
-        });
-
-        it('unfreeze account', () => {
-            return bsTokenFrontend.freezeAccountAsync(account2, false, {
-                from: admin,
-                gas: gas
-            });
-        });
-
-        it('start emergency', () => {
-            return bsTokenFrontend.startEmergencyAsync({ from: admin, gas: gas})
-        });
-
-        it('should be rejected if stopInEmergency', () => {
-            const promise = bsTokenFrontend.cashOutAsync(amount - 50, bankAccount, {
-                from: account2,
-                gas: gas
-            });
-
-            return promise.should.eventually.be.rejected;
-        });
-
-        it('stop emergency', () => {
-            return bsTokenFrontend.stopEmergencyAsync({ from: admin, gas: gas})
-        });
-
-        it('check totalSupply', () => {
-            return bsTokenFrontend.totalSupplyAsync()
-                .should.eventually.satisfy(balance => balance.equals(new BigNumber(amount)));
-        });
-
-        it('should be fulfilled', () => {
-            return bsTokenFrontend.cashOutAsync(amount - 50, bankAccount, {
-                from: account2,
-                gas: gas
-            });
-        });
-
-        it('check totalSupply', () => {
-            return bsTokenFrontend.totalSupplyAsync()
-                .should.eventually.satisfy(balance => balance.equals(new BigNumber(amount - 50)));
-        });
-
-        it('check balance', () => {
-            return bsTokenFrontend.balanceOfAsync(account2)
-                .should.eventually.satisfy(balance => balance.equals(new BigNumber(amount - 50)));
-        });
-
-        it('should be rejected if there is not enough funds', () => {
-            const promise = bsTokenFrontend.cashOutAsync(amount, bankAccount, {
-                from: account2,
-                gas: gas
-            });
-
-            return promise.should.eventually.be.rejected;
-        });
-
-        it('check balance', () => {
-            return bsTokenFrontend.balanceOfAsync(account2)
-                .should.eventually.satisfy(balance => balance.equals(new BigNumber(amount - 50)));
-        });
-    });
-
     describe('approveAndCall', () => {
         it('freeze account', () => {
             return bsTokenFrontend.freezeAccountAsync(account2, true, {
@@ -520,7 +440,7 @@ describe('BsTokenFrontend contract', function () {
         });
 
         it('add cash to account2', () => {
-            return bsBanking.cashInAsync(account2, amount, { from: admin, gas: gas});
+            return bsTokenBanking.cashInAsync(account2, amount, { from: admin, gas: gas});
         });
 
         it('should be fulfilled', () => {
@@ -549,10 +469,6 @@ describe('BsTokenFrontend contract', function () {
             });
 
             return promise.should.eventually.be.rejected;
-        });
-
-        it('check bsToken remains the same', () => {
-            return bsTokenFrontend.bsTokenAsync().should.eventually.equal(bsToken.address);
         });
 
         it('should be fulfilled', () => {
