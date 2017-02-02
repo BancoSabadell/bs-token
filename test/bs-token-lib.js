@@ -1,6 +1,6 @@
 'use strict';
 
-const Deployer = require('smart-contract-deployer');
+const Deployer = require('contract-deployer');
 const fs = require('fs');
 const Web3 = require('web3');
 const BSToken = require('../src/index');
@@ -8,6 +8,8 @@ const provider = require('./mock-web3-provider');
 const Promise = require('bluebird');
 const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
+const BSTokenData = require('bs-token-data');
+const BSTokenBanking = require('bs-token-banking');
 
 const web3 = new Web3(provider);
 const assert = chai.assert;
@@ -17,13 +19,12 @@ chai.should();
 Promise.promisifyAll(web3.eth);
 Promise.promisifyAll(web3.personal);
 
-describe('token', function () {
+describe('BsToken lib', function () {
     const amount = 100;
-    const bankAccount = 'g4yr4ruenir4nueicj';
 
     const gas = 3000000;
     let bsTokenData = null;
-    let bsBanking = null;
+    let bsTokenBanking = null;
     let bsTokenFrontend = null;
     let lib = null;
     let bsToken = null;
@@ -37,31 +38,29 @@ describe('token', function () {
     before(function() {
         this.timeout(60000);
 
-        return BSToken.deploy(web3, admin, merchant, gas)
-            .then(deployment => {
-                bsTokenFrontend = deployment.bsTokenFrontend;
-                bsTokenData = deployment.bsTokenData;
-                bsBanking = deployment.bsBanking;
+        return BSTokenData.deployedContract(web3, admin, gas)
+            .then((contract) => {
+                bsTokenData = contract;
+                return BSToken.deployedContract(web3, admin, merchant, bsTokenData, gas);
+            })
+            .then((contract) => {
+                bsTokenFrontend = contract;
 
                 lib = new BSToken(web3, {
-                    admin: {
-                        account: admin,
-                        password: ''
-                    },
-                    contractBSToken: {
-                        abi: bsTokenFrontend.abi,
-                        address: bsTokenFrontend.address
-                    }
+                    admin: { account: admin, password: '' },
+                    contractBSToken: bsTokenFrontend
                 });
 
-                const deployer = new Deployer({ web3: web3, address: admin, gas: 4500000 });
-                BSToken.contracts['BSTokenDelegate.sol'] = fs.readFileSync('./test/BSTokenDelegate.sol', 'utf8');
+                BSTokenData.contracts['BSTokenDelegate.sol'] = fs.readFileSync('./test/BSTokenDelegate.sol', 'utf8');
+                const deployer = new Deployer(web3, {sources: BSTokenData.contracts}, 0);
 
-                const paramsConstructor = {'BSTokenDelegate': [bsTokenFrontend.address]};
-                return deployer.deployContracts(BSToken.contracts, paramsConstructor, ['BSTokenDelegate']);
-            }).then((contracts) => {
-                delegate = web3.eth.contract(contracts.BSTokenDelegate.abi).at(contracts.BSTokenDelegate.address);
-                return Promise.promisifyAll(delegate);
+                return deployer.deploy('BSTokenDelegate', [bsTokenFrontend.address], { from: admin, gas: gas });
+            }).then((contract) => {
+                delegate = contract;
+                return BSTokenBanking.deployedContract(web3, admin, bsTokenData, gas)
+            })
+            .then((contract) => {
+                bsTokenBanking = contract;
             });
     });
 
@@ -111,7 +110,7 @@ describe('token', function () {
 
     describe('transfer', () => {
         it('cashIn amount to account2', () => {
-            return bsBanking.cashInAsync(account2, amount, { from: admin, gas: gas});
+            return bsTokenBanking.cashInAsync(account2, amount, { from: admin, gas: gas});
         });
 
         it('freeze account', () => {
@@ -205,51 +204,6 @@ describe('token', function () {
         });
     });
 
-    describe('cashOut', () => {
-        it('freeze account', () => {
-            return lib.freezeAccount(account2, true);
-        });
-
-        it('should be rejected if the account is frozen', () => {
-            return lib.cashOut(account2, '', amount - 50, bankAccount)
-                .should.eventually.be.rejectedWith(`${account2} address has been cautiously frozen`);
-        });
-
-        it('unfreeze account', () => {
-            return lib.freezeAccount(account2, false);
-        });
-
-        it('activate stopInEmergency', () => {
-            return lib.startEmergency();
-        });
-
-        it('should be rejected if stopInEmergency', () => {
-            return lib.cashOut(account2, '', amount - 50, bankAccount)
-                .should.eventually.be.rejectedWith(`This contract has been cautiously stopped`);
-        });
-
-        it('deactivate stopInEmergency', () => {
-            return lib.stopEmergency();
-        });
-
-        it('should be fulfilled', () => {
-            return lib.cashOut(account2, '', amount - 50, bankAccount);
-        });
-
-        it('check balance account2', () => {
-            return lib.balanceOf(account2).should.eventually.include({amount: amount - 50});
-        });
-
-        it('should be rejected if there is not enough funds', () => {
-            return lib.cashOut(account2, '', amount, bankAccount)
-                .should.eventually.be.rejectedWith(`${account2} address has not enough funds`);
-        });
-
-        it('check balance account2', () => {
-            return lib.balanceOf(account2).should.eventually.include({amount: amount - 50});
-        });
-    });
-
     describe('approveAndCall', () => {
         it('freeze account', () => {
             return lib.freezeAccount(account2, true);
@@ -278,13 +232,8 @@ describe('token', function () {
             return lib.stopEmergency();
         });
 
-        it('should be rejected if there is not enough funds', () => {
-            return lib.approveAndCall(account2, '', delegate.address, account3, 1, amount)
-                .should.eventually.be.rejectedWith(`${account2} address has not enough funds`);
-        });
-
         it('add cash to account2', () => {
-            return bsBanking.cashInAsync(account2, amount, { from: admin, gas: gas});
+            return bsTokenBanking.cashInAsync(account2, amount, { from: admin, gas: gas});
         });
 
         it('should be fulfilled', () => {

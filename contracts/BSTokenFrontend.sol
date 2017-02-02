@@ -67,11 +67,6 @@ contract BSTokenFrontend is Token, Ownable {
         bsToken.freezeAccount(target, freeze);
     }
 
-    function cashOut(uint256 amount, string bankAccount) {
-        CashOut(msg.sender, amount, bankAccount);
-        bsToken.cashOut(msg.sender, amount, bankAccount);
-    }
-
     function setBSToken(address version) onlyAdmin {
         bsToken = BSToken(version);
     }
