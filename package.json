@@ -1,6 +1,6 @@
 {
   "name": "bs-token",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A js wrapper around BSToken contract to simplify its consumption",
   "main": "src/index.js",
   "scripts": {
@@ -32,9 +32,8 @@
     "solc": "^0.4.6",
     "web3": "^0.16.0",
     "eslint": "^3.12.2",
-    "smart-contract-deployer": "^1.0.1",
-    "bs-token-banking": "^1.0.2",
-    "sendgrid": "^4.7.1"
+    "contract-deployer": "^1.0.0",
+    "bs-token-data": "^1.0.0"
   },
   "devDependencies": {
     "bignumber.js": "^4.0.0",
@@ -42,7 +41,8 @@
     "chai": "^3.5.0",
     "chai-as-promised": "^6.0.0",
     "ethereumjs-testrpc": "^3.0.2",
-    "mocha": "^3.1.2"
+    "mocha": "^3.1.2",
+    "bs-token-banking": "^1.0.3"
   },
   "eslintConfig": {
     "env": {
