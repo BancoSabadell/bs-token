@@ -1,15 +1,15 @@
-import "Ownable.sol";
 import "BSTokenData.sol";
-import "Stoppable.sol";
 
 pragma solidity ^0.4.2;
 
-contract BSToken is Stoppable {
+contract BSToken {
     BSTokenData public tokenData;
+    address public frontend;
 
     /* Initializes contract with initial supply tokens to the creator of the contract */
-    function BSToken(address bsTokenDataAddress) {
+    function BSToken(address bsTokenDataAddress, address theFrontend) {
         tokenData = BSTokenData(bsTokenDataAddress);
+        frontend = theFrontend;
     }
 
     /* Get the account balance */
@@ -29,7 +29,7 @@ contract BSToken is Stoppable {
     function frozenAccount(address account)
         onlyFrontend
         constant returns (bool) {
-            return tokenData.frozenAccountForMerchant(account);
+            return tokenData.frozenAccountForLogic(account);
     }
 
     /* Returns the amount which 'spender' is still allowed to withdraw from 'account' */
@@ -41,7 +41,7 @@ contract BSToken is Stoppable {
 
     /* Send 'value' amount of tokens to address 'to' */
     function transfer(address sender, address to, uint256 value)
-        onlyFrontend stopInEmergency accountIsNotFrozen(sender)
+        onlyFrontend
         returns (bool success) {
             if (tokenData.getBalance(to) + value < tokenData.getBalance(to)) throw; // Check for overflows
 
@@ -63,7 +63,7 @@ contract BSToken is Stoppable {
      mechanism
      */
     function transferFrom(address sender, address from, address to, uint256 value)
-        onlyFrontend stopInEmergency accountIsNotFrozen(from)
+        onlyFrontend
         returns (bool success) {
             if (tokenData.getBalance(to) + value < tokenData.getBalance(to)) throw;  // Check for overflows
 
@@ -82,7 +82,7 @@ contract BSToken is Stoppable {
      allowance with 'value'.
      */
     function approve(address sender, address spender, uint256 value)
-        onlyFrontend stopInEmergency accountIsNotFrozen(sender)
+        onlyFrontend
         returns (bool success) {
             tokenData.setAllowance(sender, spender, value);
             return true;
@@ -90,22 +90,11 @@ contract BSToken is Stoppable {
 
     function freezeAccount(address target, bool freeze)
         onlyFrontend {
-            tokenData.freezeAccountForMerchant(target, freeze);
-    }
-
-    modifier accountIsNotFrozen(address target) {
-        if (frozenAccount(target))
-            throw;
-        _;
+            tokenData.freezeAccountForLogic(target, freeze);
     }
 
     modifier onlyFrontend {
-        if (msg.sender != owner) throw;
+        if (msg.sender != frontend) throw;
         _;
-    }
-
-    /* This unnamed function is called whenever someone tries to send ether to it */
-    function () {
-        throw;     // Prevents accidental sending of ether
     }
 }
