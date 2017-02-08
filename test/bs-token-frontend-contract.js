@@ -11,6 +11,7 @@ const BSTokenData = require('bs-token-data');
 const BSTokenBanking = require('bs-token-banking');
 const BSToken = require('../src/index');
 const BigNumber = require('bignumber.js');
+const GTPermissionManager = require('gt-permission-manager');
 const gas = 3000000;
 
 const provider = TestRPC.provider({
@@ -43,10 +44,11 @@ Promise.promisifyAll(web3.personal);
 describe('BsTokenFrontend contract', function () {
     const amount = 100;
 
-    let bsTokenData = null;
-    let bsTokenBanking = null;
-    let bsTokenFrontend = null;
-    let delegate = null;
+    let permissionManager;
+    let bsTokenData;
+    let bsTokenBanking;
+    let bsTokenFrontend;
+    let delegate;
 
     const admin = '0x5bd47e61fbbf9c8b70372b6f14b068fddbd834ac';
     const account2 = '0x25e940685e0999d4aa7bd629d739c6a04e625761';
@@ -57,21 +59,25 @@ describe('BsTokenFrontend contract', function () {
     before(function() {
         this.timeout(60000);
 
-        return BSTokenData.deployedContract(web3, admin, gas)
+        return GTPermissionManager.deployedContract(web3, admin, gas)
+            .then((contract) => {
+                permissionManager = contract;
+                return BSTokenData.deployedContract(web3, admin, permissionManager, gas);
+            })
             .then((contract) => {
                 bsTokenData = contract;
-                return BSToken.deployedContract(web3, admin, merchant, bsTokenData, gas);
+                return BSToken.deployedContract(web3, admin, merchant, bsTokenData, permissionManager, gas);
             })
             .then((contract) => {
                 bsTokenFrontend = contract;
 
-                BSTokenData.contracts['BSTokenDelegate.sol'] = fs.readFileSync('./test/BSTokenDelegate.sol', 'utf8');
-                const deployer = new Deployer(web3, {sources: BSTokenData.contracts}, 0);
+                BSToken.contracts['BSTokenDelegate.sol'] = fs.readFileSync('./test/BSTokenDelegate.sol', 'utf8');
+                const deployer = new Deployer(web3, {sources: BSToken.contracts}, 0);
 
                 return deployer.deploy('BSTokenDelegate', [bsTokenFrontend.address], { from: admin, gas: gas });
             }).then((contract) => {
                 delegate = contract;
-                return BSTokenBanking.deployedContract(web3, admin, bsTokenData, gas)
+                return BSTokenBanking.deployedContract(web3, admin, bsTokenData, permissionManager, gas)
             })
             .then((contract) => {
                 bsTokenBanking = contract;
@@ -79,27 +85,14 @@ describe('BsTokenFrontend contract', function () {
     });
 
     describe('check preconditions deployment', () => {
-        it('check bsTokenData owner is admin account', () => {
-            return bsTokenData.ownerAsync().should.eventually.equal(admin);
-        });
-
-        it('check bsTokenData has BSToken as a merchant account', () => {
+        it('check bsTokenData has BSToken as a logic account', () => {
             return bsTokenFrontend.bsTokenAsync()
-                .then(bsToken => bsTokenData.merchantsAsync(bsToken))
+                .then(bsToken => bsTokenData.logicsAsync(bsToken))
                 .should.eventually.equal(true);
-        });
-
-        it('check BSTokenFrontEnd owner is admin account', () => {
-            return bsTokenFrontend.ownerAsync().should.eventually.equal(admin);
         });
 
         it('check BSTokenFrontEnd has merchant account as merchant', () => {
             return bsTokenFrontend.merchantAsync().should.eventually.equal(merchant);
-        });
-
-        it('check BSTokenFrontEnd has BSToken as implementation', () => {
-            return bsTokenFrontend.bsTokenAsync()
-                .then(bsToken => bsTokenFrontend.bsTokenAsync().should.eventually.equal(bsToken));
         });
     });
 
@@ -480,58 +473,6 @@ describe('BsTokenFrontend contract', function () {
 
         it('check bsToken has been updated', () => {
             return bsTokenFrontend.bsTokenAsync().should.eventually.equal(accountDelegate);
-        });
-    });
-
-    describe('setMerchant', () => {
-        it('should be rejected if the account is not the admin', () => {
-            const promise = bsTokenFrontend.setMerchantAsync(account3, {
-                from: account2,
-                gas: gas
-            });
-
-            return promise.should.eventually.be.rejected;
-        });
-
-        it('check merchant remains the same', () => {
-            return bsTokenFrontend.merchantAsync().should.eventually.equal(merchant);
-        });
-
-        it('should be fulfilled', () => {
-            return bsTokenFrontend.setMerchantAsync(account3, {
-                from: admin,
-                gas: gas
-            });
-        });
-
-        it('check merchant has been updated', () => {
-            return bsTokenFrontend.merchantAsync().should.eventually.equal(account3);
-        });
-    });
-
-    describe('transferOwnership', () => {
-        it('should be rejected if the account is not the admin', () => {
-            const promise = bsTokenFrontend.transferOwnershipAsync(account3, {
-                from: account2,
-                gas: gas
-            });
-
-            return promise.should.eventually.be.rejected;
-        });
-
-        it('check owner remains the same', () => {
-            return bsTokenFrontend.ownerAsync().should.eventually.equal(admin);
-        });
-
-        it('should be fulfilled', () => {
-            return bsTokenFrontend.transferOwnershipAsync(account3, {
-                from: admin,
-                gas: gas
-            });
-        });
-
-        it('check owner has been updated', () => {
-            return bsTokenFrontend.ownerAsync().should.eventually.equal(account3);
         });
     });
 });

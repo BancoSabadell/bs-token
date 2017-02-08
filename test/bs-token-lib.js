@@ -10,6 +10,7 @@ const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
 const BSTokenData = require('bs-token-data');
 const BSTokenBanking = require('bs-token-banking');
+const GTPermissionManager = require('gt-permission-manager');
 
 const web3 = new Web3(provider);
 const assert = chai.assert;
@@ -23,12 +24,13 @@ describe('BsToken lib', function () {
     const amount = 100;
 
     const gas = 3000000;
-    let bsTokenData = null;
-    let bsTokenBanking = null;
-    let bsTokenFrontend = null;
-    let lib = null;
-    let bsToken = null;
-    let delegate = null;
+    let permissionManager;
+    let bsTokenData;
+    let bsTokenBanking;
+    let bsTokenFrontend;
+    let lib;
+    let bsToken;
+    let delegate;
     const admin = '0x5bd47e61fbbf9c8b70372b6f14b068fddbd834ac';
     const account2 = '0x25e940685e0999d4aa7bd629d739c6a04e625761';
     const account3 = '0x6128333118cef876bd620da1efa464437470298d';
@@ -38,10 +40,14 @@ describe('BsToken lib', function () {
     before(function() {
         this.timeout(60000);
 
-        return BSTokenData.deployedContract(web3, admin, gas)
+        return GTPermissionManager.deployedContract(web3, admin, gas)
+            .then((contract) => {
+                permissionManager = contract;
+                return BSTokenData.deployedContract(web3, admin, permissionManager, gas);
+            })
             .then((contract) => {
                 bsTokenData = contract;
-                return BSToken.deployedContract(web3, admin, merchant, bsTokenData, gas);
+                return BSToken.deployedContract(web3, admin, merchant, bsTokenData, permissionManager, gas);
             })
             .then((contract) => {
                 bsTokenFrontend = contract;
@@ -51,13 +57,13 @@ describe('BsToken lib', function () {
                     contractBSToken: bsTokenFrontend
                 });
 
-                BSTokenData.contracts['BSTokenDelegate.sol'] = fs.readFileSync('./test/BSTokenDelegate.sol', 'utf8');
-                const deployer = new Deployer(web3, {sources: BSTokenData.contracts}, 0);
+                BSToken.contracts['BSTokenDelegate.sol'] = fs.readFileSync('./test/BSTokenDelegate.sol', 'utf8');
+                const deployer = new Deployer(web3, {sources: BSToken.contracts}, 0);
 
                 return deployer.deploy('BSTokenDelegate', [bsTokenFrontend.address], { from: admin, gas: gas });
             }).then((contract) => {
                 delegate = contract;
-                return BSTokenBanking.deployedContract(web3, admin, bsTokenData, gas)
+                return BSTokenBanking.deployedContract(web3, admin, bsTokenData, permissionManager, gas)
             })
             .then((contract) => {
                 bsTokenBanking = contract;
@@ -258,30 +264,6 @@ describe('BsToken lib', function () {
 
         it('check bsToken has been updated', () => {
             return lib.getBsToken().should.eventually.include({bsToken: accountDelegate});
-        });
-    });
-
-    describe('setMerchant', () => {
-        it('should be fulfilled', () => {
-            return lib.setMerchant(account3);
-        });
-
-        it('check bsToken has been updated', () => {
-            return lib.getMerchant().should.eventually.include({merchant: account3});
-        });
-    });
-
-    describe('transferOwnership', () => {
-        it('check owner', () => {
-            return lib.getOwner().should.eventually.include({owner: admin});
-        });
-
-        it('should be fulfilled', () => {
-            return lib.transferOwnership(account3);
-        });
-
-        it('check owner after', () => {
-            return lib.getOwner().should.eventually.include({owner: account3});
         });
     });
 });

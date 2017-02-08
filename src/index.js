@@ -46,20 +46,6 @@ class BSToken {
             });
     }
 
-    transferOwnership(target) {
-        return this.unlockAdminAccount()
-            .then(() => this.contract.transferOwnershipAsync(target, {
-                from: this.config.admin.account,
-                gas: 3000000
-            }))
-            .then(tx => ({ tx }));
-    }
-
-    getOwner() {
-        return this.contract.ownerAsync()
-            .then(owner => ({ owner }));
-    }
-
     setBsToken(bsToken) {
         return this.unlockAdminAccount()
             .then(() => this.contract.setBSTokenAsync(bsToken, {
@@ -72,15 +58,6 @@ class BSToken {
     getBsToken() {
         return this.contract.bsTokenAsync()
             .then(bsToken => ({ bsToken }));
-    }
-
-    setMerchant(merchant) {
-        return this.unlockAdminAccount()
-            .then(() => this.contract.setMerchantAsync(merchant, {
-                from: this.config.admin.account,
-                gas: 3000000
-            }))
-            .then(tx => ({ tx }));
     }
 
     getMerchant() {
@@ -201,29 +178,28 @@ class BSToken {
 
 module.exports = BSToken;
 module.exports.contracts = Object.assign(BSTokenData.contracts, {
+    'Auth.sol': fs.readFileSync(path.join(__dirname, '../contracts/Auth.sol'), 'utf8'),
+    'AuthStoppable.sol': fs.readFileSync(path.join(__dirname, '../contracts/AuthStoppable.sol'), 'utf8'),
     'TokenRecipient.sol': fs.readFileSync(path.join(__dirname, '../contracts/TokenRecipient.sol'), 'utf8'),
     'BSToken.sol': fs.readFileSync(path.join(__dirname, '../contracts/BSToken.sol'), 'utf8'),
     'BSTokenFrontend.sol': fs.readFileSync(path.join(__dirname, '../contracts/BSTokenFrontend.sol'), 'utf8'),
     'Token.sol': fs.readFileSync(path.join(__dirname, '../contracts/Token.sol'), 'utf8')
 });
 
-module.exports.deployedContract = function (web3, admin, merchant, bsTokenData, gas) {
+module.exports.deployedContract = function (web3, admin, merchant, bsTokenData, permissionManager, gas) {
     const deployer = new Deployer(web3, {sources: BSToken.contracts}, 0);
 
-    return deployer.deploy('BSToken', [bsTokenData.address], { from: admin, gas: gas })
-        .then(bsToken => {
-            return bsTokenData.addMerchantAsync(bsToken.address, { from: admin, gas: gas })
-                .then(() => bsTokenData.merchantsAsync(bsToken.address))
-                .then(() => bsToken);
-        })
-        .then((bsToken) => {
-            return deployer.deploy('BSTokenFrontend', [bsToken.address], { from: admin, gas: gas })
-                .then(bsTokenFrontend => {
+    return deployer.deploy('BSTokenFrontend', [merchant, permissionManager.address], { from: admin, gas: gas })
+        .then(bsTokenFrontend => {
+            return deployer.deploy('BSToken', [bsTokenData.address, bsTokenFrontend.address], { from: admin, gas: gas })
+                .then((bsToken) => {
                     return Promise.all(
-                        bsTokenFrontend.setMerchantAsync(merchant, { from: admin, gas: gas }),
-                        bsTokenFrontend.setBSTokenAsync(bsToken.address, { from: admin, gas: gas }),
-                        bsToken.transferOwnershipAsync(bsTokenFrontend.address, { from: admin, gas: gas })
-                    ).then(() => bsTokenFrontend);
-                });
-        });
+                        bsTokenData.addLogicAsync(bsToken.address, { from: admin, gas: gas }),
+                        bsTokenFrontend.setBSTokenAsync(bsToken.address, { from: admin, gas: gas })
+                    );
+                })
+                .then(() => bsTokenFrontend.bsTokenAsync())
+                .then(() => bsTokenFrontend);
+        })
 };
+
