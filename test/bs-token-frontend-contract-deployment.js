@@ -48,8 +48,7 @@ describe('BsTokenFrontend deployment', function () {
 
     describe('deployed', () => {
         it('should be fulfilled', () => {
-            return BSToken.deployedContract(web3, admin, bsTokenFrontend.abi,
-                bsTokenFrontend.address, bsTokenData);
+            return BSToken.deployedContract(web3, bsTokenFrontend.abi, bsTokenFrontend.address, bsTokenData);
         });
     });
 });

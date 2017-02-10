@@ -203,7 +203,7 @@ module.exports.deployContract = function (web3, admin, merchant, bsTokenData, pe
         })
 };
 
-module.exports.deployedContract = function (web3, admin, abi, address, bsTokenData) {
+module.exports.deployedContract = function (web3, abi, address, bsTokenData) {
     const bsTokenFrontend = web3.eth.contract(abi).at(address);
     Promise.promisifyAll(bsTokenFrontend);
     checkContracts(bsTokenFrontend, bsTokenData);
