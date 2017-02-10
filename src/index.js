@@ -197,9 +197,7 @@ module.exports.deployContract = function (web3, admin, merchant, bsTokenData, pe
                         bsTokenData.addLogicAsync(bsToken.address, { from: admin, gas: gas }),
                         bsTokenFrontend.setBSTokenAsync(bsToken.address, { from: admin, gas: gas })
                     );
-                })
-                .then(() => checkContracts(bsTokenFrontend, bsTokenData))
-                .then(() => bsTokenFrontend);
+                }).then(() => bsTokenFrontend);
         })
 };
 
