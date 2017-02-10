@@ -7,11 +7,11 @@ const Web3 = require('web3');
 const Promise = require('bluebird');
 const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
+const GTPermissionManager = require('gt-permission-manager');
 const BSTokenData = require('bs-token-data');
 const BSTokenBanking = require('bs-token-banking');
 const BSToken = require('../src/index');
 const BigNumber = require('bignumber.js');
-const GTPermissionManager = require('gt-permission-manager');
 const gas = 3000000;
 
 const provider = TestRPC.provider({
@@ -59,25 +59,26 @@ describe('BsTokenFrontend contract', function () {
     before(function() {
         this.timeout(60000);
 
-        return GTPermissionManager.deployedContract(web3, admin, gas)
+        return GTPermissionManager.deployContract(web3, admin, gas)
             .then((contract) => {
                 permissionManager = contract;
-                return BSTokenData.deployedContract(web3, admin, permissionManager, gas);
+                return BSTokenData.deployContract(web3, admin, permissionManager, gas);
             })
             .then((contract) => {
                 bsTokenData = contract;
-                return BSToken.deployedContract(web3, admin, merchant, bsTokenData, permissionManager, gas);
+                return BSToken.deployContract(web3, admin, merchant, bsTokenData, permissionManager, gas);
             })
             .then((contract) => {
                 bsTokenFrontend = contract;
 
-                BSToken.contracts['BSTokenDelegate.sol'] = fs.readFileSync('./test/BSTokenDelegate.sol', 'utf8');
-                const deployer = new Deployer(web3, {sources: BSToken.contracts}, 0);
+                const contracts = Object.assign({}, BSToken.contracts,
+                    { 'BSTokenDelegate.sol': fs.readFileSync('./test/BSTokenDelegate.sol', 'utf8') });
+                const deployer = new Deployer(web3, {sources: contracts}, 0);
 
                 return deployer.deploy('BSTokenDelegate', [bsTokenFrontend.address], { from: admin, gas: gas });
             }).then((contract) => {
                 delegate = contract;
-                return BSTokenBanking.deployedContract(web3, admin, bsTokenData, permissionManager, gas)
+                return BSTokenBanking.deployContract(web3, admin, bsTokenData, permissionManager, gas)
             })
             .then((contract) => {
                 bsTokenBanking = contract;
