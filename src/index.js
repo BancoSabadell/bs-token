@@ -177,16 +177,16 @@ class BSToken {
 }
 
 module.exports = BSToken;
-module.exports.contracts = Object.assign(BSTokenData.contracts, {
+module.exports.contracts = Object.freeze(Object.assign({}, BSTokenData.contracts, {
     'Auth.sol': fs.readFileSync(path.join(__dirname, '../contracts/Auth.sol'), 'utf8'),
     'AuthStoppable.sol': fs.readFileSync(path.join(__dirname, '../contracts/AuthStoppable.sol'), 'utf8'),
     'TokenRecipient.sol': fs.readFileSync(path.join(__dirname, '../contracts/TokenRecipient.sol'), 'utf8'),
     'BSToken.sol': fs.readFileSync(path.join(__dirname, '../contracts/BSToken.sol'), 'utf8'),
     'BSTokenFrontend.sol': fs.readFileSync(path.join(__dirname, '../contracts/BSTokenFrontend.sol'), 'utf8'),
     'Token.sol': fs.readFileSync(path.join(__dirname, '../contracts/Token.sol'), 'utf8')
-});
+}));
 
-module.exports.deployedContract = function (web3, admin, merchant, bsTokenData, permissionManager, gas) {
+module.exports.deployContract = function (web3, admin, merchant, bsTokenData, permissionManager, gas) {
     const deployer = new Deployer(web3, {sources: BSToken.contracts}, 0);
 
     return deployer.deploy('BSTokenFrontend', [merchant, permissionManager.address], { from: admin, gas: gas })
@@ -198,8 +198,36 @@ module.exports.deployedContract = function (web3, admin, merchant, bsTokenData, 
                         bsTokenFrontend.setBSTokenAsync(bsToken.address, { from: admin, gas: gas })
                     );
                 })
-                .then(() => bsTokenFrontend.bsTokenAsync())
+                .then(() => checkContracts(bsTokenFrontend, bsTokenData))
                 .then(() => bsTokenFrontend);
         })
 };
 
+module.exports.deployedContract = function (web3, admin, abi, address, bsTokenData) {
+    const bsTokenFrontend = web3.eth.contract(abi).at(address);
+    Promise.promisifyAll(bsTokenFrontend);
+    checkContracts(bsTokenFrontend, bsTokenData);
+    return Promise.resolve(bsTokenFrontend);
+};
+
+function checkContracts(bsTokenFrontend, bsTokenData) {
+    if (!bsTokenFrontend.abi) {
+        throw new Error('abi must not be null');
+    }
+
+    if (!bsTokenFrontend.address) {
+        throw new Error('address must not be null');
+    }
+
+    if (typeof bsTokenFrontend.approveAndCallAsync === "undefined") {
+        throw new Error('contract has not been properly deployed');
+    }
+
+    return bsTokenFrontend.bsTokenAsync()
+        .then(bsToken => bsTokenData.logicsAsync(bsToken))
+        .then(added => {
+            if (!added) {
+                throw new Error('bsToken has not been added as a logic to bsTokenData');
+            }
+        });
+}

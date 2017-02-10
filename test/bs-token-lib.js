@@ -40,14 +40,14 @@ describe('BsToken lib', function () {
     before(function() {
         this.timeout(60000);
 
-        return GTPermissionManager.deployedContract(web3, admin, gas)
+        return GTPermissionManager.deployContract(web3, admin, gas)
             .then((contract) => {
                 permissionManager = contract;
-                return BSTokenData.deployedContract(web3, admin, permissionManager, gas);
+                return BSTokenData.deployContract(web3, admin, permissionManager, gas);
             })
             .then((contract) => {
                 bsTokenData = contract;
-                return BSToken.deployedContract(web3, admin, merchant, bsTokenData, permissionManager, gas);
+                return BSToken.deployContract(web3, admin, merchant, bsTokenData, permissionManager, gas);
             })
             .then((contract) => {
                 bsTokenFrontend = contract;
@@ -57,13 +57,14 @@ describe('BsToken lib', function () {
                     contractBSToken: bsTokenFrontend
                 });
 
-                BSToken.contracts['BSTokenDelegate.sol'] = fs.readFileSync('./test/BSTokenDelegate.sol', 'utf8');
-                const deployer = new Deployer(web3, {sources: BSToken.contracts}, 0);
+                const contracts = Object.assign({}, BSToken.contracts,
+                    { 'BSTokenDelegate.sol': fs.readFileSync('./test/BSTokenDelegate.sol', 'utf8') });
+                const deployer = new Deployer(web3, {sources: contracts}, 0);
 
                 return deployer.deploy('BSTokenDelegate', [bsTokenFrontend.address], { from: admin, gas: gas });
             }).then((contract) => {
                 delegate = contract;
-                return BSTokenBanking.deployedContract(web3, admin, bsTokenData, permissionManager, gas)
+                return BSTokenBanking.deployContract(web3, admin, bsTokenData, permissionManager, gas)
             })
             .then((contract) => {
                 bsTokenBanking = contract;
