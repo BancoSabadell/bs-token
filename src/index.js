@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const Promise = require('bluebird');
+const BigNumber = require('bignumber.js');
 const Deployer = require('contract-deployer');
 const BSTokenData = require('bs-token-data');
 
@@ -82,7 +83,7 @@ class BSToken {
     enoughFundsCheck(target, required) {
         return this.contract.balanceOfAsync(target)
             .then((balance) => {
-                if (balance < required) {
+                if (balance.lessThan(new BigNumber(required))) {
                     throw new Error(`${target} address has not enough funds`);
                 }
             });

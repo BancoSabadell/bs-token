@@ -1,6 +1,6 @@
 {
   "name": "bs-token",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "A js wrapper around BSToken contract to simplify its consumption",
   "main": "src/index.js",
   "scripts": {
@@ -33,10 +33,10 @@
     "web3": "^0.16.0",
     "eslint": "^3.12.2",
     "contract-deployer": "^1.0.0",
-    "bs-token-data": "^1.0.6"
+    "bs-token-data": "^1.0.6",
+    "bignumber.js": "^4.0.0"
   },
   "devDependencies": {
-    "bignumber.js": "^4.0.0",
     "bluebird": "^3.4.6",
     "chai": "^3.5.0",
     "chai-as-promised": "^6.0.0",
