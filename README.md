@@ -23,10 +23,7 @@ const lib = new BSToken(web3, {
 	        account: admin,
 	        password: password
 	    },
-	    contractBSToken: {
-	        abi: abi,
-	        address: address
-	    }
+	    contractBSToken: bsTokenFrontend
 	}
 );
 ```
